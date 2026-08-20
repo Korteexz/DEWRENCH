@@ -6,3 +6,15 @@ export async function openProject(
 ): Promise<ProjectOpenResult> {
   return invoke<ProjectOpenResult>('open_project', { path })
 }
+
+export async function createRepository(
+  path: string,
+  branch: string,
+  message: string
+): Promise<ProjectOpenResult> {
+  return invoke<ProjectOpenResult>('create_repository', {
+    path,
+    branch,
+    message,
+  })
+}
