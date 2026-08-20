@@ -1,7 +1,7 @@
-import GitHome from './modules/git/pages/GitHome'
+import HomePage from './app/pages/HomePage'
 
 function App() {
-  return <GitHome />
+  return <HomePage />
 }
 
 export default App

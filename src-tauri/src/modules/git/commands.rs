@@ -1,6 +1,7 @@
+use super::models::ProjectOpenResult;
 use super::service;
 
 #[tauri::command]
-pub fn check_git_repository(path: String) -> bool {
-    service::is_git_repository(&path)
+pub fn open_project(path: String) -> Result<ProjectOpenResult, String> {
+    service::open_project(&path)
 }
