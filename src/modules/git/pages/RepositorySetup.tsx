@@ -38,40 +38,51 @@ export default function RepositorySetup({
   }
 
   return (
-    <main>
-      <h1>Criar repositório Git</h1>
+    <main className="status-page">
+      <section className="status-panel">
+        <span className="status-panel__tag">GIT / SETUP</span>
+        <h1>Criar repositório Git</h1>
+        <p>
+          <strong>{project.name}</strong> ainda não possui um repositório Git.
+        </p>
+        <code className="status-panel__path">{project.path}</code>
 
-      <p>{project.name}</p>
-      <p>{project.path}</p>
+        <div className="setup-form">
+          <label>
+            <span>Branch inicial</span>
+            <input
+              value={branch}
+              onChange={(event) => setBranch(event.target.value)}
+              disabled={loading}
+            />
+          </label>
 
-      <label>
-        Branch inicial
-        <input
-          value={branch}
-          onChange={(event) => setBranch(event.target.value)}
-        />
-      </label>
+          <label>
+            <span>Primeiro commit</span>
+            <input
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              disabled={loading}
+            />
+          </label>
+        </div>
 
-      <label>
-        Primeiro commit
-        <input
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-        />
-      </label>
+        <div className="status-panel__actions">
+          <button className="button button--secondary" type="button" onClick={onCancel}>
+            Cancelar
+          </button>
+          <button
+            className="button button--primary"
+            type="button"
+            onClick={handleCreateRepository}
+            disabled={loading}
+          >
+            {loading ? 'Criando...' : 'Criar repositório'}
+          </button>
+        </div>
 
-      <button onClick={onCancel}>
-        Cancelar
-      </button>
-
-      <button
-        onClick={handleCreateRepository}
-        disabled={loading}
-      >
-        {loading ? 'Criando...' : 'Criar repositório'}
-      </button>
-
-      {error && <p>{error}</p>}
+        {error && <p className="feedback feedback--error">Erro: {error}</p>}
+      </section>
     </main>
   )
 }
