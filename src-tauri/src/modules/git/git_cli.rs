@@ -5,6 +5,17 @@ pub fn run(
     path: &Path,
     args: &[&str],
 ) -> Result<String, String> {
+    Ok(
+        run_raw(path, args)?
+            .trim()
+            .to_string()
+    )
+}
+
+pub fn run_raw(
+    path: &Path,
+    args: &[&str],
+) -> Result<String, String> {
     let output = Command::new("git")
         .args(args)
         .current_dir(path)
@@ -23,7 +34,6 @@ pub fn run(
 
     Ok(
         String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .to_string()
+            .into_owned()
     )
 }

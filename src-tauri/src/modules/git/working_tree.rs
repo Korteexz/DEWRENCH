@@ -4,10 +4,10 @@ use super::git_cli;
 use super::models::GitFileStatus;
 
 pub fn get_status(path: &Path) -> Result<Vec<GitFileStatus>, String> {
-    let output = git_cli::run(
-        path,
-        &["status", "--porcelain=v1"],
-    )?;
+    let output = git_cli::run_raw(
+    path,
+    &["status", "--porcelain=v1"],
+)?;
 
     let files = output
         .lines()
