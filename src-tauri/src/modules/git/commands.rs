@@ -33,13 +33,8 @@ pub fn get_repository_details(
 ) -> Result<GitRepositoryDetails, String> {
     service::get_repository_details(&path)
 }
-#[tauri::command]
-pub fn stage_file(
-    path: String,
-    file: String,
-) -> Result<(), String> {
-    service::stage_file(&path, &file)
-}
+
+
 #[tauri::command]
 pub fn create_commit(
     path: String,
@@ -59,12 +54,54 @@ pub fn get_repository_graph(
 #[tauri::command]
 pub fn create_branch_from(
     path: String,
-    from_branch: String,
-    new_branch: String,
+    start_point: String,
+    branch_name: String,
 ) -> Result<(), String> {
     service::create_branch_from(
         &path,
-        &from_branch,
-        &new_branch,
+        &start_point,
+        &branch_name,
+    )
+}
+#[tauri::command]
+pub fn stage_file(
+    path: String,
+    file: String,
+) -> Result<(), String> {
+    service::stage_file(
+        &path,
+        &file,
+    )
+}
+#[tauri::command]
+pub fn unstage_file(
+    path: String,
+    file: String,
+) -> Result<(), String> {
+    service::unstage_file(
+        &path,
+        &file,
+    )
+}
+#[tauri::command]
+pub fn get_commit_diff(
+    path: String,
+    revision: String,
+) -> Result<String, String> {
+    service::get_commit_diff(
+        &path,
+        &revision,
+    )
+}
+
+
+#[tauri::command]
+pub fn switch_branch(
+    path: String,
+    branch_name: String,
+) -> Result<(), String> {
+    service::switch_branch(
+        &path,
+        &branch_name,
     )
 }

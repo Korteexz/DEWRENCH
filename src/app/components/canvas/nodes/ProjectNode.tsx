@@ -1,15 +1,6 @@
-import type { Node, NodeProps } from '@xyflow/react'
+import type { NodeProps } from '@xyflow/react'
 
-import type { GitState } from '../../../modules/git/types/project'
-
-export interface ProjectNodeData extends Record<string, unknown> {
-  name: string
-  path: string
-  gitState: GitState
-}
-
-export type ProjectFlowNode =
-  Node<ProjectNodeData, 'project'>
+import type { ProjectFlowNode } from '../../../graph/types'
 
 export default function ProjectNode({
   data,
@@ -24,7 +15,7 @@ export default function ProjectNode({
       <div className="project-node__orb">
         <span className="project-node__core" />
 
-        {data.gitState === 'repository' && (
+        {data.project.git_state === 'repository' && (
           <span
             className="project-node__capability"
             title="Git disponível"
@@ -35,7 +26,7 @@ export default function ProjectNode({
       </div>
 
       <span className="project-node__name">
-        {data.name}
+        {data.project.name}
       </span>
     </div>
   )
