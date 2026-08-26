@@ -16,8 +16,17 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-          modules::git::commands::open_project,
-          modules::git::commands::create_repository,
+            modules::git::commands::open_project,
+            modules::git::commands::create_repository,
+            modules::git::commands::get_repository_details,
+            modules::git::commands::get_repository_graph,
+            modules::git::commands::stage_file,
+            modules::git::commands::unstage_file,
+            modules::git::commands::create_commit,
+            modules::git::commands::get_commit_diff,
+            
+            modules::git::commands::create_branch_from,
+            modules::git::commands::switch_branch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
