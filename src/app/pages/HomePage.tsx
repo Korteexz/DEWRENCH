@@ -1,14 +1,21 @@
 import { useState } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
+
 import { openProject } from '../../modules/git/services/gitServices'
 import type { ProjectOpenResult } from '../../modules/git/types/project'
 
-export default function HomePage() {
-  const [project, setProject] = useState<ProjectOpenResult | null>(null)
+interface HomePageProps {
+  onProjectOpened: (project: ProjectOpenResult) => void
+}
+
+export default function HomePage({ onProjectOpened }: HomePageProps) {
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   async function handleOpenProject() {
     try {
+      setLoading(true)
+
       const selectedPath = await open({
         directory: true,
         multiple: false,
@@ -21,50 +28,32 @@ export default function HomePage() {
 
       const result = await openProject(selectedPath)
 
-      setProject(result)
       setError(null)
-
-      console.log(result)
+      onProjectOpened(result)
     } catch (err) {
       setError(String(err))
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <main
-      onClick={handleOpenProject}
-      style={{
-        width: '100vw',
-        height: '100vh',
-        background: '#000',
-        color: '#fff',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        fontFamily: 'Roboto, sans-serif',
-      }}
-    >
-      {!project && !error && (
-        <p>[ clique aqui para abrir um projeto ]</p>
-      )}
+    <main className="home-page">
+      <button
+        className="home-page__open"
+        type="button"
+        onClick={handleOpenProject}
+        disabled={loading}
+      >
+        <span className="home-page__eyebrow">DEWRENCH / LOCAL WORKSPACE</span>
+        <span className="home-page__mark" aria-hidden="true" />
+        <span className="home-page__prompt">
+          {loading ? 'abrindo projeto...' : 'clique para abrir um projeto'}
+        </span>
+        <span className="home-page__hint">Selecione uma pasta local</span>
+      </button>
 
-      {project && (
-        <>
-          <h1>{project.name}</h1>
-
-          <p>{project.path}</p>
-
-          <p>
-            Estado Git: {project.git_state}
-          </p>
-        </>
-      )}
-
-      {error && (
-        <p>Erro: {error}</p>
-      )}
+      {error && <p className="feedback feedback--error">Erro: {error}</p>}
     </main>
   )
 }
