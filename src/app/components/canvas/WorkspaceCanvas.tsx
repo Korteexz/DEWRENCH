@@ -7,6 +7,7 @@ import {
 import { useEffect, useRef } from 'react'
 import '@xyflow/react/dist/style.css'
 
+import ComputationalGrid from './ComputationalGrid'
 import DeformableGrid, {
   type DeformableGridHandle,
 } from './DeformableGrid'
@@ -58,6 +59,7 @@ export default function WorkspaceCanvas({
 
   return (
     <div className="workspace-canvas">
+      <ComputationalGrid />
       <DeformableGrid ref={gridRef} />
       <ReactFlow<WorkspaceFlowNode, WorkspaceFlowEdge>
         nodes={nodes}

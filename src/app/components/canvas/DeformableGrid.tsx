@@ -133,19 +133,18 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
     // Explicit non-null aliases remain narrowed inside the animation closures.
     const surface: HTMLCanvasElement = canvas
     const drawingContext: CanvasRenderingContext2D = context
+    const resizeTarget = surface.parentElement ?? surface
 
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     reducedMotionRef.current = motionQuery.matches
 
     function rebuild() {
-      const bounds = surface.getBoundingClientRect()
+      const bounds = resizeTarget.getBoundingClientRect()
       const width = Math.max(1, bounds.width)
       const height = Math.max(1, bounds.height)
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       surface.width = Math.round(width * dpr)
       surface.height = Math.round(height * dpr)
-      surface.style.width = `${width}px`
-      surface.style.height = `${height}px`
       drawingContext.setTransform(dpr, 0, 0, dpr, 0, 0)
 
       const scaledSpacing = Math.max(
@@ -175,6 +174,37 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
 
     function pointDisplacement(point: GridPoint) {
       return Math.hypot(point.x - point.restX, point.y - point.restY)
+    }
+
+    function drawLocalOcclusion(
+      interaction: InteractionPoint,
+      maximumDisplacement: number,
+    ) {
+      const radius = GRID_PHYSICS.influenceRadius * 1.15
+      const strength = interaction.active
+        ? 1
+        : Math.min(1, maximumDisplacement / 4)
+      const occlusion = drawingContext.createRadialGradient(
+        interaction.x,
+        interaction.y,
+        radius * 0.16,
+        interaction.x,
+        interaction.y,
+        radius,
+      )
+
+      // Locally soften the static tile before drawing displaced points. The
+      // gradient reaches zero opacity, so it can never limit base grid coverage.
+      occlusion.addColorStop(0, `rgba(9, 12, 10, ${0.9 * strength})`)
+      occlusion.addColorStop(0.62, `rgba(9, 12, 10, ${0.52 * strength})`)
+      occlusion.addColorStop(1, 'rgba(9, 12, 10, 0)')
+      drawingContext.fillStyle = occlusion
+      drawingContext.fillRect(
+        interaction.x - radius,
+        interaction.y - radius,
+        radius * 2,
+        radius * 2,
+      )
     }
 
     function drawWireframe(interaction: InteractionPoint) {
@@ -226,6 +256,7 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
       const { width, height } = dimensionsRef.current
       const interaction = interactionRef.current
       let moving = interaction.active
+      let maximumDisplacement = 0
 
       drawingContext.clearRect(0, 0, width, height)
 
@@ -255,21 +286,31 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
         point.x += point.vx
         point.y += point.vy
 
+        const displacement = pointDisplacement(point)
+        maximumDisplacement = Math.max(maximumDisplacement, displacement)
+
         if (
           Math.abs(point.vx) > GRID_PHYSICS.settleThreshold
           || Math.abs(point.vy) > GRID_PHYSICS.settleThreshold
-          || pointDisplacement(point) > 0.08
+          || displacement > 0.08
         ) {
           moving = true
         }
       }
 
-      drawWireframe(interaction)
+      if (moving) {
+        drawLocalOcclusion(interaction, maximumDisplacement)
+        drawWireframe(interaction)
+      }
 
       for (const point of pointsRef.current) {
         const displacement = pointDisplacement(point)
+        if (displacement < 0.08) {
+          continue
+        }
+
         const radius = 0.95 + Math.min(0.8, displacement * 0.035)
-        const opacity = 0.34 + Math.min(0.46, displacement * 0.024)
+        const opacity = 0.22 + Math.min(0.58, displacement * 0.032)
         drawingContext.fillStyle = `rgba(144, 158, 148, ${opacity})`
         drawingContext.beginPath()
         drawingContext.arc(point.x, point.y, radius, 0, Math.PI * 2)
@@ -292,7 +333,7 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
     rebuildRef.current = rebuild
     drawFrameRef.current = drawFrame
     const resizeObserver = new ResizeObserver(rebuild)
-    resizeObserver.observe(surface)
+    resizeObserver.observe(resizeTarget)
     motionQuery.addEventListener('change', handleMotionPreference)
     rebuild()
 
