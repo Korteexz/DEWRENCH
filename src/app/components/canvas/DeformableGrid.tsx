@@ -4,7 +4,6 @@ import {
   useImperativeHandle,
   useRef,
 } from 'react'
-import type { Viewport } from '@xyflow/react'
 
 import { deformableGridConfig as gridConfig } from './deformableGridConfig'
 
@@ -25,6 +24,17 @@ interface InteractionPoint {
   active: boolean
 }
 
+interface InfluenceField {
+  centerX: number
+  centerY: number
+  directionX: number
+  directionY: number
+  speed: number
+  speedRatio: number
+  majorRadius: number
+  minorRadius: number
+}
+
 export interface DeformableGridHandle {
   disturb: (
     clientX: number,
@@ -33,13 +43,12 @@ export interface DeformableGridHandle {
     velocityY: number,
   ) => void
   release: () => void
-  setViewport: (viewport: Viewport) => void
 }
 
 /**
  * Canvas owns its animation state so a drag can update hundreds of grid points
  * without causing React renders. React Flow only passes pointer impulses and its
- * viewport transform through the imperative handle above.
+ * drag coordinates through the imperative handle above.
  */
 const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
   _props,
@@ -48,7 +57,6 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pointsRef = useRef<GridPoint[]>([])
   const dimensionsRef = useRef({ width: 0, height: 0, columns: 0, rows: 0 })
-  const viewportRef = useRef<Viewport>({ x: 0, y: 0, zoom: 1 })
   const interactionRef = useRef<InteractionPoint>({
     x: 0,
     y: 0,
@@ -60,7 +68,6 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
   const releasedAtRef = useRef<number | null>(null)
   const reducedMotionRef = useRef(false)
   const drawFrameRef = useRef<(timestamp: number) => void>(() => undefined)
-  const rebuildRef = useRef<() => void>(() => undefined)
 
   function wake() {
     if (frameRef.current === null) {
@@ -72,10 +79,6 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
 
   useImperativeHandle(forwardedRef, () => ({
     disturb(clientX, clientY, velocityX, velocityY) {
-      if (reducedMotionRef.current) {
-        return
-      }
-
       const canvas = canvasRef.current
       if (!canvas) {
         return
@@ -97,20 +100,6 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
       releasedAtRef.current = performance.now()
       wake()
     },
-    setViewport(viewport) {
-      const previous = viewportRef.current
-      viewportRef.current = viewport
-
-      // Rebuild only after a visible transform change; doing this outside React
-      // keeps panning smooth while the background remains spatially anchored.
-      if (
-        Math.abs(previous.x - viewport.x) > 0.5
-        || Math.abs(previous.y - viewport.y) > 0.5
-        || Math.abs(previous.zoom - viewport.zoom) > 0.005
-      ) {
-        rebuildRef.current()
-      }
-    },
   }))
 
   useEffect(() => {
@@ -131,6 +120,7 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
 
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     reducedMotionRef.current = motionQuery.matches
+    surface.dataset.reducedMotion = String(motionQuery.matches)
 
     function rebuild() {
       const bounds = resizeTarget.getBoundingClientRect()
@@ -141,22 +131,18 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
       surface.height = Math.round(height * dpr)
       drawingContext.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-      const scaledSpacing = Math.max(
-        20,
-        Math.min(42, gridConfig.gridSpacing * viewportRef.current.zoom),
-      )
-      const xOffset = ((viewportRef.current.x % scaledSpacing) + scaledSpacing)
-        % scaledSpacing
-      const yOffset = ((viewportRef.current.y % scaledSpacing) + scaledSpacing)
-        % scaledSpacing
-      const columns = Math.ceil((width - xOffset) / scaledSpacing) + 2
-      const rows = Math.ceil((height - yOffset) / scaledSpacing) + 2
+      // CSS radial-gradient dots sit at each tile's center. Matching the
+      // half-spacing origin lets this Canvas replace those exact dots locally.
+      const spacing = gridConfig.gridSpacing
+      const origin = spacing / 2
+      const columns = Math.ceil(width / spacing) + 2
+      const rows = Math.ceil(height / spacing) + 2
       const points: GridPoint[] = []
 
       for (let row = -1; row < rows - 1; row += 1) {
         for (let column = -1; column < columns - 1; column += 1) {
-          const restX = xOffset + column * scaledSpacing
-          const restY = yOffset + row * scaledSpacing
+          const restX = origin + column * spacing
+          const restY = origin + row * spacing
           points.push({ restX, restY, x: restX, y: restY, vx: 0, vy: 0 })
         }
       }
@@ -171,42 +157,106 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
       return Math.hypot(point.x - point.restX, point.y - point.restY)
     }
 
-    function drawLocalOcclusion(
-      interaction: InteractionPoint,
-      maximumDisplacement: number,
-    ) {
-      const radius = gridConfig.influenceRadius * 1.15
-      const strength = interaction.active
-        ? 1
-        : Math.min(1, maximumDisplacement / 4)
-      const occlusion = drawingContext.createRadialGradient(
-        interaction.x,
-        interaction.y,
-        radius * 0.16,
-        interaction.x,
-        interaction.y,
-        radius,
-      )
+    function createInfluenceField(interaction: InteractionPoint): InfluenceField {
+      const speed = Math.hypot(interaction.vx, interaction.vy)
+      const speedRatio = Math.min(1, speed / gridConfig.velocityForFullDirection)
+      const directionX = speed > 0.01 ? interaction.vx / speed : 1
+      const directionY = speed > 0.01 ? interaction.vy / speed : 0
+      const wakeOffset = gridConfig.maxWakeOffset * speedRatio
+      const restingRadius = gridConfig.influenceRadius
+        * gridConfig.stationaryRadiusScale
 
-      // Locally soften the static tile before drawing displaced points. The
-      // gradient reaches zero opacity, so it can never limit base grid coverage.
-      occlusion.addColorStop(0, `rgba(9, 12, 10, ${0.9 * strength})`)
-      occlusion.addColorStop(0.62, `rgba(9, 12, 10, ${0.52 * strength})`)
-      occlusion.addColorStop(1, 'rgba(9, 12, 10, 0)')
-      drawingContext.fillStyle = occlusion
-      drawingContext.fillRect(
-        interaction.x - radius,
-        interaction.y - radius,
-        radius * 2,
-        radius * 2,
+      return {
+        centerX: interaction.x - directionX * wakeOffset,
+        centerY: interaction.y - directionY * wakeOffset,
+        directionX,
+        directionY,
+        speed,
+        speedRatio,
+        majorRadius: restingRadius
+          + gridConfig.influenceRadius
+          * gridConfig.directionalRadiusStretch
+          * speedRatio,
+        minorRadius: restingRadius
+          + gridConfig.influenceRadius
+          * gridConfig.perpendicularRadiusStretch
+          * speedRatio,
+      }
+    }
+
+    function fieldCoordinates(
+      x: number,
+      y: number,
+      field: InfluenceField,
+    ) {
+      const dx = x - field.centerX
+      const dy = y - field.centerY
+      return {
+        along: dx * field.directionX + dy * field.directionY,
+        across: -dx * field.directionY + dy * field.directionX,
+      }
+    }
+
+    function normalizedFieldDistance(
+      x: number,
+      y: number,
+      field: InfluenceField,
+      expansion = 0,
+    ) {
+      const { along, across } = fieldCoordinates(x, y, field)
+      return Math.hypot(
+        along / (field.majorRadius + expansion),
+        across / (field.minorRadius + expansion),
       )
     }
 
-    function drawWireframe(interaction: InteractionPoint) {
+    function patchCoverage(point: GridPoint, field: InfluenceField) {
+      const innerDistance = normalizedFieldDistance(
+        point.restX,
+        point.restY,
+        field,
+      )
+      if (innerDistance <= 1) {
+        return 1
+      }
+
+      const outerDistance = normalizedFieldDistance(
+        point.restX,
+        point.restY,
+        field,
+        gridConfig.edgeBlendWidth,
+      )
+      if (outerDistance >= 1) {
+        return 0
+      }
+
+      // Convert the two ellipse distances into a direction-independent blend
+      // from the force boundary to the expanded rendering boundary.
+      const value = (1 - outerDistance) / (innerDistance - outerDistance)
+      return value * value * (3 - 2 * value)
+    }
+
+    function drawLocalOcclusion(field: InfluenceField) {
+      for (const point of pointsRef.current) {
+        const coverage = patchCoverage(point, field)
+        if (coverage < 0.01) {
+          continue
+        }
+
+        // Mask only each original CSS dot instead of darkening the surrounding
+        // surface. This preserves exact dot replacement without a radial void.
+        drawingContext.fillStyle = `rgba(9, 12, 10, ${coverage})`
+        drawingContext.beginPath()
+        drawingContext.arc(point.restX, point.restY, 1.65, 0, Math.PI * 2)
+        drawingContext.fill()
+      }
+    }
+
+    function drawWireframe(field: InfluenceField) {
       const { columns, rows } = dimensionsRef.current
       const points = pointsRef.current
 
-      drawingContext.lineWidth = 0.7
+      drawingContext.lineWidth = 0.6
       for (let row = 0; row < rows; row += 1) {
         for (let column = 0; column < columns; column += 1) {
           const index = row * columns + column
@@ -216,23 +266,18 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
           }
 
           const localDisplacement = pointDisplacement(point)
-          const proximity = interaction.active
-            ? Math.max(0, 1 - Math.hypot(
-              point.x - interaction.x,
-              point.y - interaction.y,
-            ) / (gridConfig.influenceRadius * 0.92))
-            : 0
+          const coverage = patchCoverage(point, field)
           const tension = Math.max(
             0,
             localDisplacement - gridConfig.wireframeRevealThreshold,
           )
           const reveal = Math.min(
-            0.42,
-            proximity * 0.11 + tension / gridConfig.maxDisplacement * 0.42,
-          )
+            0.18,
+            tension / gridConfig.maxDisplacement * 0.3,
+          ) * coverage
 
           if (
-            reveal < 0.055
+            reveal < 0.032
             || localDisplacement < gridConfig.wireframeRevealThreshold
           ) {
             continue
@@ -256,15 +301,79 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
       }
     }
 
+    function drawDeformedPoints(field: InfluenceField) {
+      for (const point of pointsRef.current) {
+        const coverage = patchCoverage(point, field)
+        if (coverage < 0.01) {
+          continue
+        }
+
+        const displacement = pointDisplacement(point)
+        const tension = Math.min(1, displacement / gridConfig.maxDisplacement)
+        const radius = 1 + tension * 0.9
+        // This resting alpha matches --grid-dot-color. At the fade boundary,
+        // Canvas and the partially occluded CSS dot sum to one visual point.
+        const opacity = (0.34 + tension * 0.5) * coverage
+        drawingContext.fillStyle = `rgba(144, 158, 148, ${opacity})`
+        drawingContext.beginPath()
+        drawingContext.arc(point.x, point.y, radius, 0, Math.PI * 2)
+        drawingContext.fill()
+      }
+    }
+
+    function drawDebugOverlay(
+      interaction: InteractionPoint,
+      field: InfluenceField,
+      maximumDisplacement: number,
+    ) {
+      if (!gridConfig.debugMode) {
+        return
+      }
+
+      drawingContext.save()
+      drawingContext.strokeStyle = 'rgba(255, 128, 72, 0.9)'
+      drawingContext.lineWidth = 1
+      drawingContext.setLineDash([6, 5])
+      drawingContext.beginPath()
+      drawingContext.ellipse(
+        field.centerX,
+        field.centerY,
+        field.majorRadius,
+        field.minorRadius,
+        Math.atan2(field.directionY, field.directionX),
+        0,
+        Math.PI * 2,
+      )
+      drawingContext.stroke()
+      drawingContext.setLineDash([])
+      drawingContext.fillStyle = 'rgba(255, 176, 106, 0.96)'
+      drawingContext.font = '10px monospace'
+      drawingContext.fillText(
+        `GRID DEBUG x:${interaction.x.toFixed(1)} y:${interaction.y.toFixed(1)}`,
+        interaction.x + 14,
+        interaction.y - 28,
+      )
+      drawingContext.fillText(
+        `max:${maximumDisplacement.toFixed(2)} reduced:${reducedMotionRef.current ? 'ON' : 'OFF'}`,
+        interaction.x + 14,
+        interaction.y - 14,
+      )
+      drawingContext.restore()
+    }
+
     function drawFrame(timestamp: number) {
       frameRef.current = null
       const { width, height } = dimensionsRef.current
       const interaction = interactionRef.current
+      const influenceField = createInfluenceField(interaction)
       const forceRest = !interaction.active
         && releasedAtRef.current !== null
         && timestamp - releasedAtRef.current >= gridConfig.maxSettleDurationMs
       let moving = interaction.active
       let maximumDisplacement = 0
+      const motionScale = reducedMotionRef.current
+        ? gridConfig.reducedMotionScale
+        : 1
 
       drawingContext.clearRect(0, 0, width, height)
 
@@ -277,21 +386,45 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
           continue
         }
 
-        if (interaction.active && !reducedMotionRef.current) {
-          const dx = point.x - interaction.x
-          const dy = point.y - interaction.y
-          const distance = Math.max(1, Math.hypot(dx, dy))
+        if (interaction.active) {
+          const fieldDistance = normalizedFieldDistance(
+            point.restX,
+            point.restY,
+            influenceField,
+          )
 
-          if (distance < gridConfig.influenceRadius) {
-            const falloff = (1 - distance / gridConfig.influenceRadius) ** 2
+          if (fieldDistance < 1) {
+            const dx = point.x - interaction.x
+            const dy = point.y - interaction.y
+            const radialDistance = Math.max(1, Math.hypot(dx, dy))
+            const { along } = fieldCoordinates(
+              point.restX,
+              point.restY,
+              influenceField,
+            )
+            const trailingWeight = Math.max(
+              0,
+              Math.min(1, -along / influenceField.majorRadius),
+            )
+            const directionalWeight = gridConfig.forwardForceFloor
+              + (1 - gridConfig.forwardForceFloor) * trailingWeight
+            const radialStrength = gridConfig.displacementStrength
+              * (1 - influenceField.speedRatio
+                * gridConfig.radialMotionReduction)
+            const directionalStrength = Math.min(
+              influenceField.speed,
+              gridConfig.velocityForFullDirection,
+            ) * gridConfig.pointerVelocityTransfer * directionalWeight
+            const falloff = (1 - fieldDistance) ** 2
+
             point.vx += (
-              (dx / distance) * gridConfig.displacementStrength
-              + interaction.vx * gridConfig.pointerVelocityTransfer
-            ) * falloff
+              (dx / radialDistance) * radialStrength
+              + influenceField.directionX * directionalStrength
+            ) * falloff * motionScale
             point.vy += (
-              (dy / distance) * gridConfig.displacementStrength
-              + interaction.vy * gridConfig.pointerVelocityTransfer
-            ) * falloff
+              (dy / radialDistance) * radialStrength
+              + influenceField.directionY * directionalStrength
+            ) * falloff * motionScale
           }
         }
 
@@ -332,23 +465,19 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
       }
 
       if (moving) {
-        drawLocalOcclusion(interaction, maximumDisplacement)
-        drawWireframe(interaction)
+        drawLocalOcclusion(influenceField)
+        drawWireframe(influenceField)
+        drawDeformedPoints(influenceField)
+        drawDebugOverlay(interaction, influenceField, maximumDisplacement)
       }
 
-      for (const point of pointsRef.current) {
-        const displacement = pointDisplacement(point)
-        if (displacement < gridConfig.settleDisplacement) {
-          continue
-        }
-
-        const radius = 0.95 + Math.min(0.8, displacement * 0.035)
-        const opacity = 0.22 + Math.min(0.58, displacement * 0.032)
-        drawingContext.fillStyle = `rgba(144, 158, 148, ${opacity})`
-        drawingContext.beginPath()
-        drawingContext.arc(point.x, point.y, radius, 0, Math.PI * 2)
-        drawingContext.fill()
-      }
+      // Expose live diagnostics for visual automation and field debugging.
+      // They remain harmless when the rendered debug overlay is disabled.
+      surface.dataset.deforming = String(moving)
+      surface.dataset.interactionX = interaction.x.toFixed(1)
+      surface.dataset.interactionY = interaction.y.toFixed(1)
+      surface.dataset.maximumDisplacement = maximumDisplacement.toFixed(2)
+      surface.dataset.interactionSpeed = influenceField.speed.toFixed(2)
 
       if (moving && !document.hidden) {
         frameRef.current = window.requestAnimationFrame(drawFrame)
@@ -359,11 +488,7 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
 
     function handleMotionPreference(event: MediaQueryListEvent) {
       reducedMotionRef.current = event.matches
-      if (event.matches) {
-        interactionRef.current.active = false
-        releasedAtRef.current = null
-        rebuild()
-      }
+      surface.dataset.reducedMotion = String(event.matches)
     }
 
     function handleVisibilityChange() {
@@ -373,7 +498,6 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
       }
     }
 
-    rebuildRef.current = rebuild
     drawFrameRef.current = drawFrame
     const resizeObserver = new ResizeObserver(rebuild)
     resizeObserver.observe(resizeTarget)

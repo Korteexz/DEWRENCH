@@ -162,7 +162,6 @@ export default function WorkspaceCanvas({
         }}
         onPaneClick={onPaneClick}
         onMoveStart={onMoveStart}
-        onMove={(_event, viewport) => gridRef.current?.setViewport(viewport)}
         onPaneContextMenu={(event) => event.preventDefault()}
         nodesConnectable={false}
         edgesReconnectable={false}
