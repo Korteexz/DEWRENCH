@@ -1,16 +1,19 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { NodeMouseHandler } from '@xyflow/react'
 
+import AppShell from '../components/shell/AppShell'
 import BranchInspector from '../components/canvas/inspectors/BranchInspector'
 import CommitInspector from '../components/canvas/inspectors/CommitInspector'
 import ProjectInspector from '../components/canvas/inspectors/ProjectInspector'
 import NodeContextMenu, {
   type NodeContextMenuItem,
 } from '../components/canvas/menus/NodeContextMenu'
-import WorkspaceCanvas from '../components/canvas/WorkspaceCanvas'
 import { layoutWorkspaceGraph } from '../graph/layout'
 import { commitNodeId, type WorkspaceFlowNode } from '../graph/types'
 import { adaptGitGraph } from '../../modules/git/adapters/gitGraphAdapter'
+import GitGraphViewport from '../../modules/git/components/GitGraphViewport'
+import GitInspectorPane from '../../modules/git/components/GitInspectorPane'
+import GitSidebar from '../../modules/git/components/GitSidebar'
 import { useGitGraph } from '../../modules/git/hooks/useGitGraph'
 import {
   createBranchFrom,
@@ -243,34 +246,75 @@ export default function WorkspacePage({
     ? selectedNode.data.commit
     : null
 
-  return (
-    <main className="workspace-page">
-      <header className="workspace-header">
-        <div className="workspace-header__brand">
-          <span className="workspace-header__signal" />
-          <span>DEWRENCH</span>
-        </div>
-        <div className="workspace-header__project" title={project.path}>
-          <span>PROJETO</span>
-          <strong>
-            {project.name}
-            {repositoryDetails ? ` / ${repositoryDetails.branch}` : ''}
-          </strong>
-        </div>
-        <button
-          className="workspace-header__action nodrag nopan"
-          type="button"
-          onClick={onOpenAnotherProject}
-        >
-          Voltar / Abrir outro projeto
-        </button>
-      </header>
+  const inspector = selectedNode?.data.kind === 'project' ? (
+    <ProjectInspector
+      project={selectedNode.data.project}
+      details={repositoryDetails}
+      loading={loading}
+      busy={busyAction !== null}
+      error={visibleError}
+      onClose={() => setSelectedNodeId(null)}
+      onRefresh={() => void handleRefresh()}
+      onStage={handleStage}
+      onUnstage={handleUnstage}
+      onCommit={handleCommit}
+    />
+  ) : selectedBranch ? (
+    <BranchInspector
+      branch={selectedBranch}
+      busy={busyAction !== null}
+      error={visibleError}
+      onClose={() => setSelectedNodeId(null)}
+      onSwitch={() => handleSwitchBranch(selectedBranch)}
+      onCreateBranch={(name) => handleCreateBranch(selectedBranch.name, name)}
+    />
+  ) : selectedCommit ? (
+    <CommitInspector
+      commit={selectedCommit}
+      diff={commitDiff?.commitHash === selectedCommit.hash
+        ? commitDiff.value
+        : null}
+      diffLoading={diffLoading}
+      busy={busyAction !== null}
+      error={visibleError}
+      onClose={() => setSelectedNodeId(null)}
+      onViewDiff={() => void handleViewDiff(selectedCommit)}
+      onCreateBranch={(name) => handleCreateBranch(selectedCommit.hash, name)}
+    />
+  ) : null
 
-      <section className="workspace-canvas" aria-label={`Workspace de ${project.name}`}>
-        <WorkspaceCanvas
+  return (
+    <AppShell
+      project={project}
+      branch={repositoryDetails?.branch ?? null}
+      connected={gitGraph !== null}
+      onOpenAnotherProject={onOpenAnotherProject}
+    >
+      <div className="git-workspace">
+        <GitSidebar
+          project={project}
+          details={repositoryDetails}
+          graph={gitGraph}
+          selectedNodeId={selectedNodeId}
+          loading={loading}
+          onSelectNode={(nodeId) => {
+            setSelectedNodeId(nodeId)
+            closeContextMenu()
+            setActionError(null)
+          }}
+          onRefresh={() => void handleRefresh()}
+        />
+
+        <GitGraphViewport
           key={layoutVersion}
+          projectName={project.name}
+          branchName={repositoryDetails?.branch ?? null}
           initialNodes={positionedGraph.nodes}
           edges={positionedGraph.edges}
+          selectedNodeId={selectedNodeId}
+          loading={loading}
+          activity={busyAction}
+          error={!selectedNode ? visibleError : null}
           onNodeClick={handleNodeClick}
           onNodeContextMenu={handleNodeContextMenu}
           onPaneClick={() => {
@@ -279,68 +323,11 @@ export default function WorkspacePage({
           }}
           onMoveStart={closeContextMenu}
         />
-      </section>
 
-      <div className="workspace-legend" aria-hidden="true">
-        <span className="workspace-legend__project" /> PROJECT
-        <span className="workspace-legend__commit" /> COMMIT
-        <span className="workspace-legend__branch" /> BRANCH
+        <GitInspectorPane project={project} details={repositoryDetails}>
+          {inspector}
+        </GitInspectorPane>
       </div>
-
-      {(loading || busyAction) && (
-        <div className="workspace-activity" role="status">
-          {busyAction ?? 'Carregando Git…'}
-        </div>
-      )}
-
-      {visibleError && !selectedNode && (
-        <p className="workspace-error">{visibleError}</p>
-      )}
-
-      {selectedNode?.data.kind === 'project' && (
-        <ProjectInspector
-          project={selectedNode.data.project}
-          details={repositoryDetails}
-          loading={loading}
-          busy={busyAction !== null}
-          error={visibleError}
-          onClose={() => setSelectedNodeId(null)}
-          onRefresh={() => void handleRefresh()}
-          onStage={handleStage}
-          onUnstage={handleUnstage}
-          onCommit={handleCommit}
-        />
-      )}
-
-      {selectedBranch && (
-        <BranchInspector
-          branch={selectedBranch}
-          busy={busyAction !== null}
-          error={visibleError}
-          onClose={() => setSelectedNodeId(null)}
-          onSwitch={() => handleSwitchBranch(selectedBranch)}
-          onCreateBranch={(name) => (
-            handleCreateBranch(selectedBranch.name, name)
-          )}
-        />
-      )}
-
-      {selectedCommit && (
-        <CommitInspector
-          commit={selectedCommit}
-          diff={commitDiff?.commitHash === selectedCommit.hash
-            ? commitDiff.value
-            : null}
-          diffLoading={diffLoading}
-          busy={busyAction !== null}
-          error={visibleError}
-          onClose={() => setSelectedNodeId(null)}
-          onViewDiff={() => void handleViewDiff(selectedCommit)}
-          onCreateBranch={(name) => (
-            handleCreateBranch(selectedCommit.hash, name)
-          )}
-        />
-      )}
 
       {contextMenu && contextMenuItems.length > 0 && (
         <NodeContextMenu
@@ -350,6 +337,6 @@ export default function WorkspacePage({
           onClose={closeContextMenu}
         />
       )}
-    </main>
+    </AppShell>
   )
 }

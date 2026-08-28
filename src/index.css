@@ -1,18 +1,55 @@
 :root {
-  --bg: #080908;
-  --surface: #0e100f;
-  --surface-raised: #141614;
-  --border: #272a27;
-  --border-strong: #3b3f3a;
-  --text: #a3a8a1;
-  --text-strong: #f0f2ed;
-  --text-dim: #6e746c;
-  --accent: #ff7217;
-  --accent-soft: rgba(255, 114, 23, 0.14);
-  --accent-border: rgba(255, 114, 23, 0.42);
-  --danger: #ff766f;
-  --canvas-dot: #2d302c;
-  --sans: Roboto, "Segoe UI", Arial, sans-serif;
+  --color-bg-primary: #070908;
+  --color-bg-canvas: #090c0a;
+  --color-bg-panel: #0d110f;
+  --color-bg-panel-raised: #121713;
+  --color-border: #222923;
+  --color-border-strong: #354038;
+  --color-text-primary: #dce5dc;
+  --color-text-secondary: #9da99f;
+  --color-text-muted: #606d63;
+  --color-status-success: #55df9b;
+  --color-status-warning: #e8c969;
+  --color-status-danger: #ff746b;
+  --color-info: #68aee8;
+  --color-module-git: #f08a3c;
+  --color-module-docker: #65a9df;
+  --color-module-db: #d5bf68;
+  --color-module-rrf: #64cbb2;
+
+  /* Compatibility aliases keep setup/home UI on the same token system. */
+  --bg: var(--color-bg-primary);
+  --surface: var(--color-bg-panel);
+  --surface-raised: var(--color-bg-panel-raised);
+  --border: var(--color-border);
+  --border-strong: var(--color-border-strong);
+  --text: var(--color-text-secondary);
+  --text-strong: var(--color-text-primary);
+  --text-dim: var(--color-text-muted);
+  --accent: var(--color-module-git);
+  --accent-soft: rgba(240, 138, 60, 0.13);
+  --accent-border: rgba(240, 138, 60, 0.42);
+  --danger: var(--color-status-danger);
+  --canvas-dot: #384239;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --radius-small: 3px;
+  --radius-medium: 8px;
+  --motion-fast: 120ms;
+  --motion-standard: 240ms;
+  --motion-spring: 420ms cubic-bezier(0.2, 0.9, 0.2, 1.15);
+  --crt-scanline-opacity: 0.035;
+  --crt-vignette-opacity: 0.44;
+  --panel-left-width: 252px;
+  --panel-right-width: 306px;
+  --system-bar-height: 72px;
+
+  --sans: Inter, "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
   --mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
 
   color: var(--text);
@@ -48,6 +85,10 @@ button {
   color: inherit;
 }
 
+button:not(:disabled) {
+  -webkit-tap-highlight-color: transparent;
+}
+
 button:focus-visible,
 input:focus-visible {
   outline: 1px solid var(--accent);
@@ -56,4 +97,21 @@ input:focus-visible {
 
 code {
   font-family: var(--mono);
+}
+
+::selection {
+  background: rgba(85, 223, 155, 0.24);
+  color: var(--color-text-primary);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }

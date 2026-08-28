@@ -201,7 +201,9 @@ export function layoutWorkspaceGraph(
       target: edge.target,
       sourceHandle: isBranchHead ? 'branch-out' : 'ancestry-out',
       targetHandle: isBranchHead ? 'branch-in' : 'ancestry-in',
-      type: 'smoothstep',
+      // React Flow names its built-in Bezier renderer "default". The curve reads
+      // as a flexible signal cable and follows nodes automatically while dragging.
+      type: 'default',
       className: [
         `workspace-edge--${edge.kind}`,
         isMerge ? 'workspace-edge--merge' : '',
