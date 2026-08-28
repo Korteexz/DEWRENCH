@@ -6,6 +6,8 @@ import {
 } from 'react'
 import type { Viewport } from '@xyflow/react'
 
+import { deformableGridConfig as gridConfig } from './deformableGridConfig'
+
 interface GridPoint {
   restX: number
   restY: number
@@ -34,19 +36,6 @@ export interface DeformableGridHandle {
   setViewport: (viewport: Viewport) => void
 }
 
-// These are deliberately kept together: changing the fabric response should not
-// require searching through rendering code. Values are pixels / animation frame.
-const GRID_PHYSICS = {
-  spacing: 28,
-  influenceRadius: 148,
-  spring: 0.052,
-  damping: 0.84,
-  push: 1.55,
-  velocityTransfer: 0.17,
-  wireThreshold: 1.6,
-  settleThreshold: 0.025,
-} as const
-
 /**
  * Canvas owns its animation state so a drag can update hundreds of grid points
  * without causing React renders. React Flow only passes pointer impulses and its
@@ -68,13 +57,16 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
     active: false,
   })
   const frameRef = useRef<number | null>(null)
+  const releasedAtRef = useRef<number | null>(null)
   const reducedMotionRef = useRef(false)
-  const drawFrameRef = useRef<() => void>(() => undefined)
+  const drawFrameRef = useRef<(timestamp: number) => void>(() => undefined)
   const rebuildRef = useRef<() => void>(() => undefined)
 
   function wake() {
     if (frameRef.current === null) {
-      frameRef.current = window.requestAnimationFrame(() => drawFrameRef.current())
+      frameRef.current = window.requestAnimationFrame((timestamp) => (
+        drawFrameRef.current(timestamp)
+      ))
     }
   }
 
@@ -97,10 +89,12 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
         vy: velocityY,
         active: true,
       }
+      releasedAtRef.current = null
       wake()
     },
     release() {
       interactionRef.current.active = false
+      releasedAtRef.current = performance.now()
       wake()
     },
     setViewport(viewport) {
@@ -149,7 +143,7 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
 
       const scaledSpacing = Math.max(
         20,
-        Math.min(42, GRID_PHYSICS.spacing * viewportRef.current.zoom),
+        Math.min(42, gridConfig.gridSpacing * viewportRef.current.zoom),
       )
       const xOffset = ((viewportRef.current.x % scaledSpacing) + scaledSpacing)
         % scaledSpacing
@@ -169,6 +163,7 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
 
       dimensionsRef.current = { width, height, columns, rows }
       pointsRef.current = points
+      releasedAtRef.current = null
       wake()
     }
 
@@ -180,7 +175,7 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
       interaction: InteractionPoint,
       maximumDisplacement: number,
     ) {
-      const radius = GRID_PHYSICS.influenceRadius * 1.15
+      const radius = gridConfig.influenceRadius * 1.15
       const strength = interaction.active
         ? 1
         : Math.min(1, maximumDisplacement / 4)
@@ -225,19 +220,29 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
             ? Math.max(0, 1 - Math.hypot(
               point.x - interaction.x,
               point.y - interaction.y,
-            ) / (GRID_PHYSICS.influenceRadius * 0.92))
+            ) / (gridConfig.influenceRadius * 0.92))
             : 0
-          const reveal = Math.max(
-            proximity * 0.34,
-            Math.min(0.46, localDisplacement / 28),
+          const tension = Math.max(
+            0,
+            localDisplacement - gridConfig.wireframeRevealThreshold,
+          )
+          const reveal = Math.min(
+            0.42,
+            proximity * 0.11 + tension / gridConfig.maxDisplacement * 0.42,
           )
 
-          if (reveal < 0.07 || localDisplacement < GRID_PHYSICS.wireThreshold) {
+          if (
+            reveal < 0.055
+            || localDisplacement < gridConfig.wireframeRevealThreshold
+          ) {
             continue
           }
 
           drawingContext.strokeStyle = `rgba(111, 223, 174, ${reveal})`
-          const neighbours = [points[index + 1], points[index + columns]]
+          const neighbours = [
+            column + 1 < columns ? points[index + 1] : undefined,
+            row + 1 < rows ? points[index + columns] : undefined,
+          ]
           for (const neighbour of neighbours) {
             if (!neighbour) {
               continue
@@ -251,48 +256,76 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
       }
     }
 
-    function drawFrame() {
+    function drawFrame(timestamp: number) {
       frameRef.current = null
       const { width, height } = dimensionsRef.current
       const interaction = interactionRef.current
+      const forceRest = !interaction.active
+        && releasedAtRef.current !== null
+        && timestamp - releasedAtRef.current >= gridConfig.maxSettleDurationMs
       let moving = interaction.active
       let maximumDisplacement = 0
 
       drawingContext.clearRect(0, 0, width, height)
 
       for (const point of pointsRef.current) {
+        if (forceRest) {
+          point.x = point.restX
+          point.y = point.restY
+          point.vx = 0
+          point.vy = 0
+          continue
+        }
+
         if (interaction.active && !reducedMotionRef.current) {
           const dx = point.x - interaction.x
           const dy = point.y - interaction.y
           const distance = Math.max(1, Math.hypot(dx, dy))
 
-          if (distance < GRID_PHYSICS.influenceRadius) {
-            const falloff = (1 - distance / GRID_PHYSICS.influenceRadius) ** 2
+          if (distance < gridConfig.influenceRadius) {
+            const falloff = (1 - distance / gridConfig.influenceRadius) ** 2
             point.vx += (
-              (dx / distance) * GRID_PHYSICS.push
-              + interaction.vx * GRID_PHYSICS.velocityTransfer
+              (dx / distance) * gridConfig.displacementStrength
+              + interaction.vx * gridConfig.pointerVelocityTransfer
             ) * falloff
             point.vy += (
-              (dy / distance) * GRID_PHYSICS.push
-              + interaction.vy * GRID_PHYSICS.velocityTransfer
+              (dy / distance) * gridConfig.displacementStrength
+              + interaction.vy * gridConfig.pointerVelocityTransfer
             ) * falloff
           }
         }
 
-        point.vx += (point.restX - point.x) * GRID_PHYSICS.spring
-        point.vy += (point.restY - point.y) * GRID_PHYSICS.spring
-        point.vx *= GRID_PHYSICS.damping
-        point.vy *= GRID_PHYSICS.damping
+        point.vx += (point.restX - point.x) * gridConfig.springStrength
+        point.vy += (point.restY - point.y) * gridConfig.springStrength
+        point.vx *= gridConfig.damping
+        point.vy *= gridConfig.damping
+
+        const speed = Math.hypot(point.vx, point.vy)
+        if (speed > gridConfig.maxVelocity) {
+          const scale = gridConfig.maxVelocity / speed
+          point.vx *= scale
+          point.vy *= scale
+        }
+
         point.x += point.vx
         point.y += point.vy
 
-        const displacement = pointDisplacement(point)
+        let displacement = pointDisplacement(point)
+        if (displacement > gridConfig.maxDisplacement) {
+          const scale = gridConfig.maxDisplacement / displacement
+          point.x = point.restX + (point.x - point.restX) * scale
+          point.y = point.restY + (point.y - point.restY) * scale
+          point.vx *= 0.42
+          point.vy *= 0.42
+          displacement = gridConfig.maxDisplacement
+        }
+
         maximumDisplacement = Math.max(maximumDisplacement, displacement)
 
         if (
-          Math.abs(point.vx) > GRID_PHYSICS.settleThreshold
-          || Math.abs(point.vy) > GRID_PHYSICS.settleThreshold
-          || displacement > 0.08
+          Math.abs(point.vx) > gridConfig.settleVelocity
+          || Math.abs(point.vy) > gridConfig.settleVelocity
+          || displacement > gridConfig.settleDisplacement
         ) {
           moving = true
         }
@@ -305,7 +338,7 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
 
       for (const point of pointsRef.current) {
         const displacement = pointDisplacement(point)
-        if (displacement < 0.08) {
+        if (displacement < gridConfig.settleDisplacement) {
           continue
         }
 
@@ -319,12 +352,22 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
 
       if (moving && !document.hidden) {
         frameRef.current = window.requestAnimationFrame(drawFrame)
+      } else if (!interaction.active) {
+        releasedAtRef.current = null
       }
     }
 
     function handleMotionPreference(event: MediaQueryListEvent) {
       reducedMotionRef.current = event.matches
       if (event.matches) {
+        interactionRef.current.active = false
+        releasedAtRef.current = null
+        rebuild()
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.hidden) {
         interactionRef.current.active = false
         rebuild()
       }
@@ -335,11 +378,13 @@ const DeformableGrid = forwardRef<DeformableGridHandle>(function DeformableGrid(
     const resizeObserver = new ResizeObserver(rebuild)
     resizeObserver.observe(resizeTarget)
     motionQuery.addEventListener('change', handleMotionPreference)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     rebuild()
 
     return () => {
       resizeObserver.disconnect()
       motionQuery.removeEventListener('change', handleMotionPreference)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current)
       }

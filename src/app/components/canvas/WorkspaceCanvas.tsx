@@ -5,7 +5,7 @@ import {
   type NodeMouseHandler,
   type ReactFlowInstance,
 } from '@xyflow/react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import '@xyflow/react/dist/style.css'
 
 import ComputationalGrid from './ComputationalGrid'
@@ -13,6 +13,13 @@ import DeformableGrid, {
   type DeformableGridHandle,
 } from './DeformableGrid'
 import { useGraphPhysics } from './useGraphPhysics'
+import { useNodeProximity } from './useNodeProximity'
+import {
+  createGraphFocus,
+  getEdgeFocusLevel,
+  getNodeFocusLevel,
+  withGraphInteractionClasses,
+} from '../../graph/focus'
 import { workspaceNodeTypes } from '../../graph/nodeTypes'
 import type {
   WorkspaceFlowEdge,
@@ -59,14 +66,31 @@ export default function WorkspaceCanvas({
   const gridRef = useRef<DeformableGridHandle>(null)
   const previousPointerRef = useRef<{ x: number; y: number } | null>(null)
   const graphPhysics = useGraphPhysics(initialNodes, edges, setNodes)
+  const proximityNodeId = useNodeProximity(canvasRef)
+  const graphFocus = useMemo(
+    () => createGraphFocus(selectedNodeId, edges),
+    [edges, selectedNodeId],
+  )
+  const renderedEdges = useMemo(() => edges.map((edge) => ({
+    ...edge,
+    className: withGraphInteractionClasses(
+      edge.className,
+      getEdgeFocusLevel(edge.id, graphFocus),
+    ),
+  })), [edges, graphFocus])
 
   useEffect(() => {
-    // Sidebar selection is external to React Flow, so mirror it into node state.
+    // Mirror sidebar selection plus derived one-hop focus into React Flow state.
     setNodes((currentNodes) => currentNodes.map((node) => ({
       ...node,
       selected: node.id === selectedNodeId,
+      className: withGraphInteractionClasses(
+        node.className,
+        getNodeFocusLevel(node.id, graphFocus),
+        node.id === proximityNodeId,
+      ),
     })))
-  }, [selectedNodeId, setNodes])
+  }, [graphFocus, proximityNodeId, selectedNodeId, setNodes])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -96,7 +120,7 @@ export default function WorkspaceCanvas({
       <DeformableGrid ref={gridRef} />
       <ReactFlow<WorkspaceFlowNode, WorkspaceFlowEdge>
         nodes={nodes}
-        edges={edges}
+        edges={renderedEdges}
         nodeTypes={workspaceNodeTypes}
         onInit={(instance) => {
           flowRef.current = instance

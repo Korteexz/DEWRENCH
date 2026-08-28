@@ -30,17 +30,23 @@ export default function CommitNode({ data, selected }: NodeProps<CommitFlowNode>
         isConnectable={false}
       />
 
-      <span className="commit-node__point" />
-      <span className="commit-node__hash">{commit.short_hash}</span>
-      <span className="commit-node__message">{commit.message}</span>
-      {isMerge && (
-        <span
-          className="commit-node__merge"
-          title={`${commit.parents.length} parent commits`}
-        >
-          {commit.parents.length}× MERGE
-        </span>
-      )}
+      <span className="commit-node__visual" aria-hidden="true">
+        <span className="commit-node__ring" />
+        <span className="commit-node__core" />
+      </span>
+
+      <span className="commit-node__label">
+        <span className="commit-node__hash">{commit.short_hash}</span>
+        <span className="commit-node__message">{commit.message}</span>
+        {isMerge && (
+          <span
+            className="commit-node__merge"
+            title={`${commit.parents.length} parent commits`}
+          >
+            {commit.parents.length}× MERGE
+          </span>
+        )}
+      </span>
 
       <Handle
         id="ancestry-out"
