@@ -31,6 +31,15 @@ export async function stageFile(
 ): Promise<void> {
   return invoke<void>('stage_file', { path, file })
 }
+/**
+ * Envia todas as mudanças do working tree para o staging area.
+ */
+export async function stageAll(
+  path: string,
+): Promise<void> {
+  return invoke<void>('stage_all', { path })
+}
+
 
 export async function unstageFile(
   path: string,

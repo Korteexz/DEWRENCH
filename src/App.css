@@ -1495,3 +1495,8 @@
 
   .crt-overlay__scanlines { display: none; }
 }
+.inspector-section__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

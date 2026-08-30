@@ -24,7 +24,9 @@ pub fn run() {
             modules::git::commands::unstage_file,
             modules::git::commands::create_commit,
             modules::git::commands::get_commit_diff,
-            
+            modules::git::commands::stage_file,
+            modules::git::commands::stage_all,
+            modules::git::commands::unstage_file,
             modules::git::commands::create_branch_from,
             modules::git::commands::switch_branch,
         ])

@@ -15,6 +15,7 @@ interface ProjectInspectorProps {
   onClose: () => void
   onRefresh: () => void
   onStage: (file: string) => Promise<boolean>
+  onStageAll: () => Promise<boolean>
   onUnstage: (file: string) => Promise<boolean>
   onCommit: (message: string) => Promise<boolean>
 }
@@ -40,11 +41,13 @@ export default function ProjectInspector({
   onClose,
   onRefresh,
   onStage,
+  onStageAll,
   onUnstage,
   onCommit,
 }: ProjectInspectorProps) {
   const [message, setMessage] = useState('')
   const files = details?.files ?? []
+  const unstagedCount = files.filter(hasUnstagedChanges).length
   const stagedCount = files.filter(isStaged).length
 
   async function handleCommit() {
@@ -74,9 +77,24 @@ export default function ProjectInspector({
         <section className="inspector-section">
           <div className="inspector-section__heading">
             <h2>Working tree</h2>
-            <button type="button" onClick={onRefresh} disabled={loading || busy}>
-              {loading ? 'Carregando…' : 'Atualizar'}
-            </button>
+
+            <div className="inspector-section__actions">
+              <button
+                type="button"
+                onClick={() => void onStageAll()}
+                disabled={loading || busy || unstagedCount === 0}
+              >
+                Stage all ({unstagedCount})
+              </button>
+
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={loading || busy}
+              >
+                {loading ? 'Carregando…' : 'Atualizar'}
+              </button>
+            </div>
           </div>
 
           {files.length === 0 && !loading && (

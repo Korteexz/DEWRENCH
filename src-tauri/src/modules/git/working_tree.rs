@@ -59,3 +59,17 @@ pub fn unstage_file(
 
     Ok(())
 }
+/// Adiciona ao staging TODOS os arquivos modificados,
+/// novos e removidos do working tree.
+///
+/// `git add -A` também respeita o .gitignore.
+pub fn stage_all(
+    path: &Path,
+) -> Result<(), String> {
+    git_cli::run(
+        path,
+        &["add", "-A"],
+    )?;
+
+    Ok(())
+}

@@ -66,6 +66,20 @@ pub fn stage_file(
         file,
     )
 }
+/// Faz stage de todas as alterações do repositório.
+///
+/// A camada service recebe strings vindas da interface
+/// e converte o caminho para Path antes de chamar
+/// a implementação Git propriamente dita.
+pub fn stage_all(
+    path: &str,
+) -> Result<(), String> {
+    let repository_path = Path::new(path);
+
+    working_tree::stage_all(
+        repository_path,
+    )
+}
 pub fn unstage_file(
     path: &str,
     file: &str,

@@ -19,6 +19,7 @@ import {
   createBranchFrom,
   createCommit,
   getCommitDiff,
+  stageAll,
   stageFile,
   switchBranch,
   unstageFile,
@@ -129,10 +130,12 @@ export default function WorkspacePage({
       // useGitGraph exposes the backend error through loadingError.
     }
   }
-
-  function handleStage(file: string): Promise<boolean> {
-    return executeMutation('Stage file', () => stageFile(project.path, file))
-  }
+  function handleStageAll(): Promise<boolean> {
+  return executeMutation(
+    'Stage all',
+    () => stageAll(project.path),
+  )
+}
 
   function handleUnstage(file: string): Promise<boolean> {
     return executeMutation('Unstage file', () => unstageFile(project.path, file))
@@ -255,7 +258,8 @@ export default function WorkspacePage({
       error={visibleError}
       onClose={() => setSelectedNodeId(null)}
       onRefresh={() => void handleRefresh()}
-      onStage={handleStage}
+      onStage={handleUnstage}
+      onStageAll={handleStageAll}
       onUnstage={handleUnstage}
       onCommit={handleCommit}
     />

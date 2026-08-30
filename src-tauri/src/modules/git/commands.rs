@@ -74,6 +74,14 @@ pub fn stage_file(
     )
 }
 #[tauri::command]
+pub fn stage_all(
+    path: String,
+) -> Result<(), String> {
+    service::stage_all(
+        &path,
+    )
+}
+#[tauri::command]
 pub fn unstage_file(
     path: String,
     file: String,
