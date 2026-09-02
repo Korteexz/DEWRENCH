@@ -293,87 +293,105 @@
 .workspace-canvas .react-flow__attribution { background: transparent; color: #3c473f; font-family: var(--mono); font-size: 7px; }
 .workspace-canvas .react-flow__attribution a { color: inherit; }
 
+/*
+ * O projeto é a âncora da topologia: mesma gramática de commit e branch —
+ * uma marca luminosa mais rótulo — porém hexagonal e maior. Sem órbitas,
+ * anéis ou halo decorativo: a hierarquia vem do tamanho e da cor do
+ * instrumento, não de enfeite ao redor.
+ */
 .project-node {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 9px;
-  color: var(--color-text-primary);
-  cursor: grab;
-  font-family: var(--mono);
-}
-
-.project-node__orb {
   position: relative;
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   place-items: center;
-  border: 1px solid rgba(240, 138, 60, 0.25);
-  border-radius: 50%;
-  background: rgba(9, 12, 10, 0.84);
-  transition: border-color var(--motion-fast), transform var(--motion-spring);
+  color: var(--ink-hi);
+  cursor: grab;
+  font-family: var(--font-mono);
+  transition: transform var(--m-glow-rise) var(--ease-out);
 }
 
-.project-node__orb::before {
+.project-node__visual {
   position: absolute;
-  inset: -13px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(240, 138, 60, 0.13), rgba(240, 138, 60, 0.035) 48%, transparent 72%);
-  filter: blur(3px);
-  content: '';
+  inset: 0;
+  display: grid;
+  place-items: center;
 }
 
-.project-node__orb::after {
+/*
+ * clip-path recorta box-shadow junto, então aqui a luz é drop-shadow: ele
+ * segue a silhueta hexagonal. É filtro, mas há exatamente UM nó de projeto
+ * no grafo — o custo por pixel não escala com o histórico.
+ */
+.project-node__hex,
+.project-node__halo {
   position: absolute;
-  inset: 5px;
-  border: 1px dashed rgba(240, 138, 60, 0.36);
-  border-radius: 50%;
-  content: '';
+  width: 15px;
+  height: 17px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
 }
 
-.project-node__core {
-  position: relative;
-  z-index: 2;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-module-git);
-  box-shadow: 0 0 8px rgba(240, 138, 60, 0.8), 0 0 22px rgba(240, 138, 60, 0.24);
+.project-node__hex {
+  background: var(--instrument-current);
+  filter:
+    drop-shadow(0 0 5px rgba(216, 129, 63, 0.72))
+    drop-shadow(0 0 16px rgba(216, 129, 63, 0.3));
+  transition:
+    background var(--m-glow-rise) var(--ease-out),
+    transform var(--m-glow-rise) var(--ease-out);
 }
 
+/* Camada de foco: acende por opacidade, como nos commits e nas branches. */
+.project-node__halo {
+  background: var(--signal-active);
+  filter:
+    drop-shadow(0 0 6px rgba(230, 233, 234, 0.6))
+    drop-shadow(0 0 18px rgba(230, 233, 234, 0.24));
+  opacity: 0;
+  transition:
+    opacity var(--m-glow-fall) var(--ease-out),
+    transform var(--m-glow-rise) var(--ease-out);
+}
+
+.project-node:hover .project-node__halo,
+.project-node--selected .project-node__halo {
+  opacity: 1;
+  transition: opacity var(--m-glow-rise) var(--ease-out);
+}
+
+.project-node:hover,
+.project-node--selected { transform: scale(1.06); }
+
+.project-node:hover .project-node__hex,
+.project-node--selected .project-node__hex,
+.project-node:hover .project-node__halo,
+.project-node--selected .project-node__halo { transform: scale(1.1); }
+
+/* Capacidade real do projeto (o módulo que consegue lê-lo), não etiqueta. */
 .project-node__capability {
   position: absolute;
-  z-index: 3;
-  top: -7px;
-  left: 25px;
-  padding: 2px 4px;
-  border: 1px solid rgba(240, 138, 60, 0.3);
-  border-radius: 2px;
-  background: #0a0d0b;
-  color: #ef9a58;
+  top: -4px;
+  left: 24px;
+  padding: 1px 3px;
+  border: 1px solid var(--instrument-current);
+  background: var(--surface-void);
+  color: var(--instrument-current);
   font-size: 6px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
 .project-node__name {
-  position: relative;
-  padding: 3px 7px;
-  border-right: 1px solid rgba(240, 138, 60, 0.22);
-  border-left: 1px solid rgba(240, 138, 60, 0.22);
-  color: var(--color-text-primary);
-  font-size: 9px;
+  position: absolute;
+  top: 32px;
+  padding: 2px 7px;
+  border-right: 1px solid var(--line-edge);
+  border-left: 1px solid var(--line-edge);
+  color: var(--ink-hi);
+  font-size: var(--t-micro);
   letter-spacing: 0.05em;
   text-align: center;
+  white-space: nowrap;
 }
-
-.project-node:hover .project-node__orb,
-.project-node--selected .project-node__orb {
-  border-color: var(--color-module-git);
-  transform: scale(1.08);
-}
-
-.project-node--selected .project-node__orb { box-shadow: 0 0 0 5px rgba(240, 138, 60, 0.055); }
 
 .workspace-handle {
   width: 1px !important;
@@ -405,23 +423,42 @@
   place-items: center;
 }
 
-.commit-node__ring {
-  position: absolute;
-  inset: 2px;
-  border: 1px solid rgba(117, 128, 120, 0.76);
+/*
+ * Commit é um ponto luminoso, sem anel.
+ *
+ * O halo é box-shadow em camadas (núcleo -> difusão) e não filter/blur: o
+ * canvas pode ter dezenas de nós em movimento e blur é composto por pixel.
+ */
+.commit-node__core {
+  position: relative;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(85, 223, 155, 0.025);
-  transition: border-color 180ms ease, box-shadow 220ms ease, transform 220ms ease;
+  background: var(--ink-mid);
+  box-shadow:
+    0 0 4px 1px rgba(153, 161, 164, 0.34),
+    0 0 10px 2px rgba(153, 161, 164, 0.12);
+  transition:
+    background var(--m-glow-rise) var(--ease-out),
+    box-shadow var(--m-glow-rise) var(--ease-out),
+    transform var(--m-glow-rise) var(--ease-out);
 }
 
-.commit-node__core {
-  width: 5px;
-  height: 5px;
-  border: 1px solid var(--color-bg-canvas);
+/*
+ * O halo de foco vive em uma camada própria e acende por OPACIDADE.
+ * Interpolar box-shadow entre dois estados é caro e serrilha; opacidade é
+ * composta na GPU, então dezenas de nós podem acender ao mesmo tempo.
+ */
+.commit-node__core::after {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
-  background: #7a877e;
-  box-shadow: 0 0 0 1px #68756c;
-  transition: background 180ms ease, box-shadow 220ms ease, transform 220ms ease;
+  box-shadow:
+    0 0 6px 2px rgba(230, 233, 234, 0.55),
+    0 0 17px 5px rgba(230, 233, 234, 0.2);
+  opacity: 0;
+  content: '';
+  transition: opacity var(--m-glow-fall) var(--ease-out);
 }
 
 .commit-node__label {
@@ -450,28 +487,30 @@
   opacity: 0.72;
 }
 
-.commit-node--merge .commit-node__ring {
-  border-color: rgba(139, 138, 105, 0.76);
-  box-shadow: 0 0 0 2px rgba(232, 201, 105, 0.045);
+/* Merge continua distinguível sem o anel: muda a cor da luz, não a forma. */
+.commit-node--merge .commit-node__core {
+  background: var(--signal-info);
+  box-shadow:
+    0 0 4px 1px rgba(111, 163, 196, 0.4),
+    0 0 12px 3px rgba(111, 163, 196, 0.16);
 }
 
 .commit-node:hover,
 .commit-node--selected { transform: scale(1.06); }
 
-.commit-node:hover .commit-node__ring,
-.commit-node--selected .commit-node__ring,
-.react-flow__node-commit.graph-label--nearby .commit-node__ring {
-  border-color: rgba(85, 223, 155, 0.78);
-  box-shadow: 0 0 0 2px rgba(85, 223, 155, 0.055), 0 0 9px rgba(85, 223, 155, 0.18);
-  transform: scale(1.08);
-}
-
+/* Foco/seleção acendem o ponto por contraste, não por cor. */
 .commit-node:hover .commit-node__core,
 .commit-node--selected .commit-node__core,
 .react-flow__node-commit.graph-label--nearby .commit-node__core {
-  background: var(--color-status-success);
-  box-shadow: 0 0 0 1px var(--color-status-success), 0 0 8px rgba(85, 223, 155, 0.42);
-  transform: scale(1.12);
+  background: var(--signal-active);
+  transform: scale(1.15);
+}
+
+.commit-node:hover .commit-node__core::after,
+.commit-node--selected .commit-node__core::after,
+.react-flow__node-commit.graph-label--nearby .commit-node__core::after {
+  opacity: 1;
+  transition: opacity var(--m-glow-rise) var(--ease-out);
 }
 
 .commit-node:hover .commit-node__label,
@@ -495,50 +534,126 @@
 .react-flow__node-commit.graph-focus--dimmed .commit-node__label { opacity: 0.015; }
 .react-flow__node-commit.graph-focus--dimmed.graph-label--nearby .commit-node__label { opacity: 0.16; }
 
+/*
+ * Branch tem a MESMA estrutura de um commit — ponto luminoso mais rótulo —
+ * apenas com a marca em losango. Nenhuma caixa: a forma carrega a semântica.
+ *
+ * Diferença deliberada em relação ao commit: o rótulo da branch fica sempre
+ * legível. Branches são poucas e nomeiam a topologia; commits são muitos e
+ * revelam o rótulo por proximidade do ponteiro.
+ */
 .branch-node {
   position: relative;
-  display: flex;
-  width: max-content;
-  max-width: 156px;
-  min-height: 26px;
-  align-items: center;
-  gap: 7px;
-  padding: 0 5px;
-  color: var(--color-text-secondary);
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  color: var(--ink-mid);
   cursor: grab;
-  font-family: var(--mono);
+  font-family: var(--font-mono);
+  transition: transform var(--m-signal) var(--ease-out);
 }
 
-.branch-node::before {
+.branch-node__visual {
   position: absolute;
   inset: 0;
-  border: 1px solid transparent;
-  background: rgba(85, 223, 155, 0.025);
+  display: grid;
+  place-items: center;
+}
+
+/* O halo acompanha a rotação do elemento, então a luz também é losangular. */
+.branch-node__diamond {
+  position: relative;
+  width: 7px;
+  height: 7px;
+  background: var(--ink-mid);
+  box-shadow:
+    0 0 4px 1px rgba(153, 161, 164, 0.34),
+    0 0 10px 2px rgba(153, 161, 164, 0.12);
+  transform: rotate(45deg);
+  transition:
+    background var(--m-glow-rise) var(--ease-out),
+    box-shadow var(--m-glow-rise) var(--ease-out),
+    transform var(--m-glow-rise) var(--ease-out);
+}
+
+/* Mesma camada de acendimento do commit; herda a rotação, então o halo
+   continua losangular. */
+.branch-node__diamond::after {
+  position: absolute;
+  inset: 0;
+  box-shadow:
+    0 0 6px 2px rgba(230, 233, 234, 0.55),
+    0 0 17px 5px rgba(230, 233, 234, 0.2);
   opacity: 0;
   content: '';
-  transform: scaleX(0.82);
-  transition: border-color var(--motion-fast), opacity var(--motion-fast), transform var(--motion-spring);
+  transition: opacity var(--m-glow-fall) var(--ease-out);
 }
 
-.branch-node:hover::before,
-.branch-node--selected::before { border-color: rgba(85, 223, 155, 0.18); opacity: 1; transform: scaleX(1); }
+.branch-node__label {
+  position: absolute;
+  top: 50%;
+  left: 19px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 148px;
+  opacity: 0.82;
+  pointer-events: none;
+  transform: translate(1px, -50%);
+  transition: opacity var(--m-signal) var(--ease-out), transform var(--m-signal) var(--ease-out);
+}
 
-.branch-node__diamond {
+.branch-node__name {
+  overflow: hidden;
+  color: var(--ink-hi);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.branch-node__current {
   flex: 0 0 auto;
-  width: 9px;
-  height: 9px;
-  border: 1px solid #707d73;
-  background: var(--color-bg-canvas);
-  transform: rotate(45deg);
-  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+  padding: 1px 3px;
+  border: 1px solid var(--instrument-current);
+  color: var(--instrument-current);
+  font-size: 5px;
+  letter-spacing: 0.1em;
 }
 
-.branch-node__name { position: relative; overflow: hidden; color: var(--color-text-primary); font-size: 8px; letter-spacing: 0.04em; text-overflow: ellipsis; white-space: nowrap; }
-.branch-node__current { position: relative; padding: 2px 4px; border: 1px solid rgba(240, 138, 60, 0.3); color: var(--color-module-git); font-size: 5px; letter-spacing: 0.1em; }
-.branch-node--current .branch-node__diamond,
+/* HEAD é a única branch com identidade do instrumento: ela é onde você está. */
+.branch-node--current .branch-node__diamond {
+  background: var(--instrument-current);
+  box-shadow:
+    0 0 5px 1px rgba(216, 129, 63, 0.45),
+    0 0 13px 3px rgba(216, 129, 63, 0.18);
+}
+
+.branch-node:hover,
+.branch-node--selected { transform: scale(1.06); }
+
 .branch-node:hover .branch-node__diamond,
-.branch-node--selected .branch-node__diamond { border-color: var(--color-status-success); box-shadow: 0 0 9px rgba(85, 223, 155, 0.25); }
-.branch-node--current .branch-node__diamond { background: var(--color-module-git); border-color: var(--color-module-git); box-shadow: 0 0 9px rgba(240, 138, 60, 0.3); }
+.branch-node--selected .branch-node__diamond {
+  background: var(--signal-active);
+  transform: rotate(45deg) scale(1.15);
+}
+
+.branch-node:hover .branch-node__diamond::after,
+.branch-node--selected .branch-node__diamond::after {
+  opacity: 1;
+  transition: opacity var(--m-glow-rise) var(--ease-out);
+}
+
+.branch-node:hover .branch-node__label,
+.branch-node--selected .branch-node__label {
+  opacity: 1;
+  transform: translate(4px, -50%);
+}
+
+.react-flow__node-branch.graph-focus--dimmed .branch-node__label { opacity: 0.14; }
+.react-flow__node-branch.graph-focus--connected .branch-node__label { opacity: 0.6; }
+.react-flow__node-branch.graph-focus--selected .branch-node__label { opacity: 1; }
 
 .workspace-canvas .react-flow__edge-path {
   stroke: #526057;

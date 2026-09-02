@@ -31,7 +31,6 @@ export default function CommitNode({ data, selected }: NodeProps<CommitFlowNode>
       />
 
       <span className="commit-node__visual" aria-hidden="true">
-        <span className="commit-node__ring" />
         <span className="commit-node__core" />
       </span>
 

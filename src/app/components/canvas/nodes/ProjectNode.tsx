@@ -12,18 +12,16 @@ export default function ProjectNode({
         selected ? ' project-node--selected' : ''
       }`}
     >
-      <div className="project-node__orb">
-        <span className="project-node__core" />
+      <span className="project-node__visual" aria-hidden="true">
+        <span className="project-node__hex" />
+        <span className="project-node__halo" />
+      </span>
 
-        {data.project.git_state === 'repository' && (
-          <span
-            className="project-node__capability"
-            title="Git disponível"
-          >
-            GIT
-          </span>
-        )}
-      </div>
+      {data.project.git_state === 'repository' && (
+        <span className="project-node__capability" title="Git disponível">
+          GIT
+        </span>
+      )}
 
       <span className="project-node__name">
         {data.project.name}

@@ -1,3 +1,4 @@
+import { Button } from '../../../design'
 import type { GitGraphCommit } from '../types/repository'
 import type {
   GitFailure,
@@ -58,13 +59,13 @@ export default function RevertPanel({
     <section className="inspector-section">
       <div className="inspector-section__heading">
         <h2>Revert</h2>
-        <button
-          type="button"
+        <Button
           onClick={onRequestPreview}
           disabled={busy || loading || preview !== null}
+          busy={loading}
         >
           {loading ? 'Analisando…' : 'Reverter commit'}
-        </button>
+        </Button>
       </div>
 
       {loading && (
@@ -121,17 +122,18 @@ export default function RevertPanel({
           )}
 
           <div className="revert-panel__actions">
-            <button type="button" onClick={onCancel} disabled={busy}>
+            <Button size="md" onClick={onCancel} disabled={busy}>
               Cancelar
-            </button>
-            <button
-              className="inspector-button--primary"
-              type="button"
+            </Button>
+            <Button
+              size="md"
+              variant="danger"
               onClick={onConfirm}
               disabled={busy}
+              busy={busy}
             >
               {busy ? 'Revertendo…' : 'Criar commit de Revert'}
-            </button>
+            </Button>
           </div>
         </div>
       )}

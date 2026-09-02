@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { Button } from '../../../../design'
 import type { ProjectOpenResult } from '../../../../modules/git/types/project'
 import type { GitRepositoryDetails } from '../../../../modules/git/types/repository'
 import {
@@ -71,21 +72,16 @@ export default function ProjectInspector({
             <h2>Working tree</h2>
 
             <div className="inspector-section__actions">
-              <button
-                type="button"
+              <Button
                 onClick={() => void onStageAll()}
                 disabled={loading || busy || unstagedCount === 0}
               >
                 Stage all ({unstagedCount})
-              </button>
+              </Button>
 
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={loading || busy}
-              >
-                {loading ? 'Carregando…' : 'Atualizar'}
-              </button>
+              <Button onClick={onRefresh} disabled={loading || busy} busy={loading}>
+                {loading ? 'Lendo…' : 'Atualizar'}
+              </Button>
             </div>
           </div>
 
@@ -102,22 +98,14 @@ export default function ProjectInspector({
                 </div>
                 <div className="file-status-list__actions">
                   {hasUnstagedChanges(file) && (
-                    <button
-                      type="button"
-                      onClick={() => void onStage(file.path)}
-                      disabled={busy}
-                    >
+                    <Button onClick={() => void onStage(file.path)} disabled={busy}>
                       Stage
-                    </button>
+                    </Button>
                   )}
                   {isStaged(file) && (
-                    <button
-                      type="button"
-                      onClick={() => void onUnstage(file.path)}
-                      disabled={busy}
-                    >
+                    <Button onClick={() => void onUnstage(file.path)} disabled={busy}>
                       Unstage
-                    </button>
+                    </Button>
                   )}
                 </div>
               </li>
@@ -134,14 +122,15 @@ export default function ProjectInspector({
               placeholder="Mensagem do commit"
               disabled={busy}
             />
-            <button
-              className="inspector-button--primary"
-              type="button"
+            <Button
+              size="md"
+              variant="primary"
+              block
               onClick={() => void handleCommit()}
               disabled={busy || message.trim().length === 0}
             >
               Commit staged files
-            </button>
+            </Button>
           </div>
         </section>
 

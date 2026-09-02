@@ -8,6 +8,7 @@
  */
 import './tokens/index.css'
 import './primitives/primitives.css'
+import './layout/layout.css'
 
 export { Panel } from './primitives/Panel'
 export { SectionHeader } from './primitives/SectionHeader'
@@ -20,6 +21,7 @@ export { DataRow } from './primitives/DataRow'
 export { CoordinateLabel } from './primitives/CoordinateLabel'
 export { InstrumentFrame } from './primitives/InstrumentFrame'
 export { Button } from './primitives/Button'
+export { SplitDeck } from './layout/SplitDeck'
 
 export type { LabelTone } from './primitives/TechnicalLabel'
 export type { MetricTone } from './primitives/Metric'

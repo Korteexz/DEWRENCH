@@ -78,6 +78,9 @@
 }
 
 .dw-panel__body {
+  /* min-width:0 é o que faz conteúdo largo ROLAR dentro do painel em vez de
+     esticá-lo: sem isso, um diff lado a lado empurraria o deck inteiro. */
+  min-width: 0;
   min-height: 0;
   flex: 1 1 auto;
   padding: var(--s3);
@@ -380,3 +383,4 @@
 .dw-button[data-variant='danger'] { border-color: var(--signal-fault); color: var(--signal-fault); }
 .dw-button[data-variant='danger']:hover:not(:disabled) { background: var(--wash-fault); }
 .dw-button[data-busy='true'] { cursor: progress; }
+.dw-button[data-block='true'] { width: 100%; }

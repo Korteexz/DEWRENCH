@@ -8,18 +8,9 @@
    pertence à segunda fatia do redesign e continua com o CSS anterior.
    ========================================================================== */
 
+/* O deck é o SplitDeck do design system; aqui ficam só as regras do módulo. */
 .git-workspace {
   position: relative;
-  display: grid;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  grid-template-columns:
-    var(--chassis-pane-left)
-    minmax(0, 1fr)
-    var(--chassis-pane-right);
-  gap: var(--chassis-gap);
-  background: var(--line-edge); /* a junta entre compartimentos é a própria borda */
 }
 
 /* -- 01 ÍNDICE ------------------------------------------------------------ */
@@ -285,7 +276,8 @@
 
 .canvas-inspector__header button:hover { border-color: var(--line-strong); color: var(--ink-hi); }
 
-.canvas-inspector__content { min-height: 0; flex: 1 1 auto; overflow: hidden auto; }
+.canvas-inspector__content { min-width: 0; min-height: 0; flex: 1 1 auto; overflow: hidden auto; }
+.inspector-section { min-width: 0; }
 
 .inspector-summary,
 .inspector-details { display: grid; margin: 0; }
@@ -337,37 +329,6 @@
 .inspector-section__heading h2 { margin-bottom: 0; }
 .inspector-section__actions { display: flex; align-items: center; gap: var(--s1); }
 
-/* Botões e campos dos inspetores compartilham a pele do design system. */
-.inspector-form button,
-.inspector-action,
-.inspector-section__actions button,
-.file-status-list__actions button {
-  display: inline-flex;
-  min-height: 26px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 var(--s2);
-  border: 1px solid var(--line-edge);
-  background: transparent;
-  color: var(--ink-mid);
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: var(--t-micro);
-  letter-spacing: var(--track-wide);
-  text-transform: uppercase;
-  transition: border-color var(--m-instant) var(--ease-out), color var(--m-instant) var(--ease-out), background var(--m-instant) var(--ease-out);
-}
-
-.inspector-form button:hover:not(:disabled),
-.inspector-action:hover:not(:disabled),
-.inspector-section__actions button:hover:not(:disabled),
-.file-status-list__actions button:hover:not(:disabled) { border-color: var(--line-strong); color: var(--ink-hi); }
-
-.inspector-form button:disabled,
-.inspector-action:disabled,
-.inspector-section__actions button:disabled,
-.file-status-list__actions button:disabled { cursor: not-allowed; opacity: 0.38; }
-
 .inspector-form { display: grid; gap: var(--s2); }
 
 .inspector-form input {
@@ -381,9 +342,7 @@
 }
 
 .inspector-form input::placeholder { color: var(--ink-faint); }
-.inspector-form .inspector-button--primary { border-color: var(--instrument-current); color: var(--instrument-current); }
-.inspector-form .inspector-button--primary:hover:not(:disabled) { background: var(--wash-instrument); }
-.inspector-action { width: 100%; margin-top: var(--s4); min-height: 30px; }
+.inspector-action { margin-top: var(--s4); }
 
 .file-status-list,
 .recent-commit-list { display: grid; gap: var(--s1); margin: var(--s2) 0 0; padding: 0; list-style: none; }
@@ -423,20 +382,175 @@
 
 .canvas-inspector__path { display: block; overflow: hidden; margin-top: var(--s4); color: var(--ink-faint); font-family: var(--font-mono); font-size: var(--t-micro); text-overflow: ellipsis; white-space: nowrap; }
 
-/* Diff continua texto bruto do Git: monospace legível, sem colorização falsa. */
-.commit-diff {
-  max-height: min(340px, 36vh);
-  overflow: auto;
-  margin: var(--s2) 0 0;
-  padding: var(--s3);
-  border: 1px solid var(--line-hair);
-  background: var(--surface-void);
-  color: var(--ink-mid);
+/* ==========================================================================
+   LEITURA DE DIFF
+   --------------------------------------------------------------------------
+   Dois modos, como as ferramentas que o usuário já conhece: unificado (uma
+   coluna) e lado a lado (antes | depois). O código nunca quebra linha — ele
+   rola horizontalmente, porque indentação é informação.
+   ========================================================================== */
+
+.diff-view { display: grid; min-width: 0; gap: var(--s2); margin-top: var(--s2); }
+
+.diff-view__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+}
+
+.diff-view__totals,
+.diff-file__stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-mid);
+}
+
+.diff-view__totals b,
+.diff-file__stat b { font-weight: var(--weight-regular); }
+.diff-view__totals b[data-kind='add'],
+.diff-file__stat b[data-kind='add'] { color: var(--diff-add); }
+.diff-view__totals b[data-kind='del'],
+.diff-file__stat b[data-kind='del'] { color: var(--diff-del); }
+
+/* Seletor de modo: segmento, não dois botões soltos — eles são exclusivos. */
+.diff-view__modes { display: flex; border: 1px solid var(--line-edge); }
+
+.diff-view__mode {
+  padding: 3px var(--s2);
+  border: 0;
+  border-right: 1px solid var(--line-edge);
+  background: transparent;
+  color: var(--ink-low);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  white-space: nowrap;
+  transition: background var(--m-instant) var(--ease-out), color var(--m-instant) var(--ease-out);
+}
+
+.diff-view__mode:last-child { border-right: 0; }
+.diff-view__mode:hover { color: var(--ink-hi); }
+.diff-view__mode[data-active='true'] { background: var(--surface-raised); color: var(--ink-hi); }
+
+.diff-file { min-width: 0; border: 1px solid var(--line-hair); }
+
+.diff-file__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) var(--s2);
+  border-bottom: 1px solid var(--line-hair);
+  background: var(--surface-raised);
+}
+
+.diff-file__path {
+  overflow: hidden;
+  color: var(--ink-hi);
+  /* Corta o caminho pela RAIZ, preservando o nome do arquivo. plaintext
+     mantém a ordem de leitura correta apesar do direction: rtl. */
+  direction: rtl;
+  unicode-bidi: plaintext;
   font-family: var(--font-mono);
   font-size: var(--t-body);
-  line-height: var(--leading-body);
-  white-space: pre;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+.diff-file__path em { color: var(--ink-faint); font-style: normal; }
+
+.diff-file__status {
+  flex: 0 0 auto;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+}
+
+.diff-file__stat { flex: 0 0 auto; margin-left: auto; }
+
+.diff-file__body {
+  min-width: 0;
+  overflow: auto;
+  max-height: min(420px, 46vh);
+  background: var(--surface-void);
+}
+
+.diff-file__note,
+.diff-empty {
+  margin: 0;
+  padding: var(--s3);
+  color: var(--ink-low);
+  font-size: var(--t-body);
+}
+
+.diff-file__more { padding: var(--s2); border-top: 1px solid var(--line-hair); }
+
+.diff-hunk__range {
+  display: flex;
+  gap: var(--s2);
+  padding: var(--s1) var(--s2);
+  border-top: 1px solid var(--line-hair);
+  background: var(--diff-gutter);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+}
+
+.diff-hunk__range span { overflow: hidden; color: var(--ink-low); text-overflow: ellipsis; white-space: nowrap; }
+.diff-hunk:first-child .diff-hunk__range { border-top: 0; }
+
+.diff-row,
+.diff-split-row {
+  display: grid;
+  min-width: max-content;
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  line-height: 1.55;
+}
+
+.diff-row { grid-template-columns: 38px 38px 14px minmax(0, 1fr); }
+.diff-split-row { grid-template-columns: 38px minmax(120px, 1fr) 38px minmax(120px, 1fr); }
+
+/* Números de linha são referência fixa: nunca rolam junto com o código. */
+.diff-row__num {
+  position: sticky;
+  left: 0;
+  padding: 0 var(--s2) 0 0;
+  background: var(--diff-gutter);
+  color: var(--ink-faint);
+  font-size: var(--t-micro);
+  text-align: right;
+  user-select: none;
+}
+
+.diff-split-row .diff-row__num { position: static; }
+
+.diff-row__sign {
+  color: var(--ink-faint);
+  text-align: center;
+  user-select: none;
+}
+
+.diff-row__text { padding-right: var(--s3); color: var(--ink-mid); white-space: pre; }
+
+.diff-row[data-kind='add'] { background: var(--diff-add-wash); }
+.diff-row[data-kind='add'] .diff-row__text,
+.diff-row[data-kind='add'] .diff-row__sign { color: var(--diff-add); }
+.diff-row[data-kind='del'] { background: var(--diff-del-wash); }
+.diff-row[data-kind='del'] .diff-row__text,
+.diff-row[data-kind='del'] .diff-row__sign { color: var(--diff-del); }
+
+.diff-row__text--side[data-kind='add'] { background: var(--diff-add-wash); color: var(--diff-add); }
+.diff-row__text--side[data-kind='del'] { background: var(--diff-del-wash); color: var(--diff-del); }
+/* Lado vazio: o par não existe daquele lado — fica ausente, não em branco. */
+.diff-row__text--side[data-kind='empty'] { background: var(--diff-gutter); }
 
 /* -- Compactação do deck -------------------------------------------------- */
 @media (max-width: 1180px) {
@@ -444,7 +558,15 @@
 }
 
 @media (max-width: 940px) {
-  .git-workspace { grid-template-columns: var(--chassis-pane-left) minmax(0, 1fr); }
+  /* O inspetor sai do fluxo e flutua; a junta direita perde a função. */
+  .git-workspace {
+    grid-template-columns:
+      var(--pane-left, var(--chassis-pane-left))
+      auto
+      minmax(0, 1fr);
+  }
+
+  .git-workspace > .dw-split-deck__divider:last-of-type { display: none; }
 
   .git-inspector-pane {
     position: absolute;
@@ -453,7 +575,7 @@
     right: var(--s2);
     bottom: var(--s2);
     display: none;
-    width: min(320px, calc(100vw - var(--chassis-pane-left) - var(--s6)));
+    width: min(320px, calc(100vw - var(--pane-left, var(--chassis-pane-left)) - var(--s6)));
     border: 1px solid var(--line-strong);
   }
 
@@ -463,6 +585,7 @@
 
 @media (max-width: 680px) {
   .git-workspace { display: block; }
+  .git-workspace > .dw-split-deck__divider { display: none; }
   .git-sidebar { display: none; }
   .git-graph-viewport { width: 100%; height: 100%; }
   .git-inspector-pane { width: min(330px, calc(100vw - var(--s5))); }

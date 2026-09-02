@@ -43,6 +43,16 @@
   /* Reatribuído pelo shell quando outro módulo assumir a viewport. */
   --instrument-current: var(--instrument-git);
 
+  /* -- Leitura de diff ----------------------------------------------------
+     Verde e vermelho aqui significam "linha adicionada/removida", não
+     "saudável/falho". Tokens próprios impedem que os dois sentidos se
+     confundam quando alguém for mexer na paleta depois. */
+  --diff-add: #63c48d;
+  --diff-del: #e0655c;
+  --diff-add-wash: rgba(99, 196, 141, 0.09);
+  --diff-del-wash: rgba(224, 101, 92, 0.09);
+  --diff-gutter: #101314;
+
   /* -- Tintas translúcidas: derivadas, para não multiplicar hex ----------- */
   --wash-active: rgba(230, 233, 234, 0.07);
   --wash-instrument: rgba(216, 129, 63, 0.1);

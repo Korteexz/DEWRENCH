@@ -72,6 +72,14 @@ export default function WorkspaceCanvas({
   const flowRef = useRef<ReactFlowInstance<WorkspaceFlowNode, WorkspaceFlowEdge>>(null)
   const gridRef = useRef<DeformableGridHandle>(null)
   const previousPointerRef = useRef<{ x: number; y: number } | null>(null)
+  /**
+   * Reenquadrar em toda mudança de tamanho era aceitável quando só a janela
+   * redimensionava. Com juntas arrastáveis o container muda a cada frame do
+   * arrasto, e refazer o fit por cima da câmera do usuário seria roubar o
+   * controle dele. A partir do primeiro gesto de pan/zoom, o enquadramento
+   * passa a ser responsabilidade dele.
+   */
+  const userFramedViewportRef = useRef(false)
   const graphPhysics = useGraphPhysics(initialNodes, edges, setNodes)
   const proximityNodeId = useNodeProximity(canvasRef)
   const graphFocus = useMemo(
@@ -107,6 +115,9 @@ export default function WorkspaceCanvas({
 
     let frame = 0
     const fitGraph = () => {
+      if (userFramedViewportRef.current) {
+        return
+      }
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
         void flowRef.current?.fitView(FIT_VIEW_OPTIONS)
@@ -170,7 +181,13 @@ export default function WorkspaceCanvas({
           gridRef.current?.release()
         }}
         onPaneClick={onPaneClick}
-        onMoveStart={onMoveStart}
+        onMoveStart={(event) => {
+          // event nulo = movimento programático (fitView); só gesto conta.
+          if (event) {
+            userFramedViewportRef.current = true
+          }
+          onMoveStart()
+        }}
         onMove={(_event, viewport) => onViewportChange?.(viewport)}
         onPaneContextMenu={(event) => event.preventDefault()}
         nodesConnectable={false}

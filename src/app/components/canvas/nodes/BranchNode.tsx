@@ -14,9 +14,14 @@ export default function BranchNode({ data, selected }: NodeProps<BranchFlowNode>
       ].filter(Boolean).join(' ')}
       title={`${branch.name} → ${branch.head}`}
     >
-      <span className="branch-node__diamond" />
-      <span className="branch-node__name">{branch.name}</span>
-      {branch.current && <span className="branch-node__current">CURRENT</span>}
+      <span className="branch-node__visual" aria-hidden="true">
+        <span className="branch-node__diamond" />
+      </span>
+
+      <span className="branch-node__label">
+        <span className="branch-node__name">{branch.name}</span>
+        {branch.current && <span className="branch-node__current">CURRENT</span>}
+      </span>
 
       <Handle
         id="branch-out"

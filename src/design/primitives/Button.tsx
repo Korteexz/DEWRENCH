@@ -8,6 +8,8 @@ interface ButtonProps {
   disabled?: boolean
   /** Operação em curso: muda apenas o cursor, sem fabricar sucesso visual. */
   busy?: boolean
+  /** Ocupa a largura do container. Para a ação principal de um compartimento. */
+  block?: boolean
   title?: string
   'aria-label'?: string
 }
@@ -19,6 +21,7 @@ export function Button({
   size = 'sm',
   disabled = false,
   busy = false,
+  block = false,
   title,
   'aria-label': ariaLabel,
 }: ButtonProps) {
@@ -29,6 +32,7 @@ export function Button({
       data-variant={variant}
       data-size={size}
       data-busy={busy}
+      data-block={block}
       disabled={disabled}
       onClick={onClick}
       title={title}

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import type { NodeMouseHandler } from '@xyflow/react'
 
 import AppShell from '../shell/AppShell'
+import { SplitDeck } from '../../design'
 import BranchInspector from '../components/canvas/inspectors/BranchInspector'
 import CommitInspector from '../components/canvas/inspectors/CommitInspector'
 import ProjectInspector from '../components/canvas/inspectors/ProjectInspector'
@@ -421,48 +422,56 @@ export default function WorkspacePage({
       )}
       onOpenAnotherProject={onOpenAnotherProject}
     >
-      <div className="git-workspace">
-        <GitSidebar
-          project={project}
-          details={repositoryDetails}
-          graph={gitGraph}
-          selectedNodeId={selectedNodeId}
-          loading={loading}
-          onSelectNode={(nodeId) => {
-            setSelectedNodeId(nodeId)
-            closeContextMenu()
-            setActionError(null)
-          }}
-          onRefresh={() => void handleRefresh()}
-        />
-
-        <GitGraphViewport
-          key={layoutVersion}
-          projectName={project.name}
-          branchName={repositoryDetails?.branch ?? null}
-          initialNodes={positionedGraph.nodes}
-          edges={positionedGraph.edges}
-          selectedNodeId={selectedNodeId}
-          loading={loading}
-          activity={busyAction}
-          error={!selectedNode ? visibleError : null}
-          onNodeClick={handleNodeClick}
-          onNodeContextMenu={handleNodeContextMenu}
-          onPaneClick={() => {
-            setSelectedNodeId(null)
-            closeContextMenu()
-          }}
-          onMoveStart={closeContextMenu}
-        />
-
-        <GitInspectorPane
-          project={project}
-          details={repositoryDetails}
-          graph={gitGraph}
-        >
-          {inspector}
-        </GitInspectorPane>
-      </div>
+      <SplitDeck
+        id="git-workspace"
+        className="git-workspace"
+        leftLabel="Redimensionar índice do repositório"
+        rightLabel="Redimensionar inspetor"
+        left={(
+          <GitSidebar
+            project={project}
+            details={repositoryDetails}
+            graph={gitGraph}
+            selectedNodeId={selectedNodeId}
+            loading={loading}
+            onSelectNode={(nodeId) => {
+              setSelectedNodeId(nodeId)
+              closeContextMenu()
+              setActionError(null)
+            }}
+            onRefresh={() => void handleRefresh()}
+          />
+        )}
+        center={(
+          <GitGraphViewport
+            key={layoutVersion}
+            projectName={project.name}
+            branchName={repositoryDetails?.branch ?? null}
+            initialNodes={positionedGraph.nodes}
+            edges={positionedGraph.edges}
+            selectedNodeId={selectedNodeId}
+            loading={loading}
+            activity={busyAction}
+            error={!selectedNode ? visibleError : null}
+            onNodeClick={handleNodeClick}
+            onNodeContextMenu={handleNodeContextMenu}
+            onPaneClick={() => {
+              setSelectedNodeId(null)
+              closeContextMenu()
+            }}
+            onMoveStart={closeContextMenu}
+          />
+        )}
+        right={(
+          <GitInspectorPane
+            project={project}
+            details={repositoryDetails}
+            graph={gitGraph}
+          >
+            {inspector}
+          </GitInspectorPane>
+        )}
+      />
 
       {contextMenu && contextMenuItems.length > 0 && (
         <NodeContextMenu
