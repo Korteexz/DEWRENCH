@@ -27,6 +27,8 @@ pub fn run() {
             modules::git::commands::unstage_file,
             modules::git::commands::create_branch_from,
             modules::git::commands::switch_branch,
+            modules::git::commands::get_revert_preview,
+            modules::git::commands::revert_commit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

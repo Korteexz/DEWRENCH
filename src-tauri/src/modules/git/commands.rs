@@ -1,6 +1,9 @@
+use super::errors::GitOperationError;
 use super::models::{
     GitGraph,
     GitRepositoryDetails,
+    GitRevertOutcome,
+    GitRevertPreview,
     ProjectOpenResult,
 };
 
@@ -111,5 +114,27 @@ pub fn switch_branch(
     service::switch_branch(
         &path,
         &branch_name,
+    )
+}
+
+#[tauri::command]
+pub fn get_revert_preview(
+    path: String,
+    revision: String,
+) -> Result<GitRevertPreview, GitOperationError> {
+    service::get_revert_preview(
+        &path,
+        &revision,
+    )
+}
+
+#[tauri::command]
+pub fn revert_commit(
+    path: String,
+    revision: String,
+) -> Result<GitRevertOutcome, GitOperationError> {
+    service::revert_commit(
+        &path,
+        &revision,
     )
 }

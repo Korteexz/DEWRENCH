@@ -2,13 +2,17 @@ use std::path::Path;
 
 use super::branches;
 use super::commits;
+use super::history;
 use super::graph;
 use super::repository;
 use super::working_tree;
 
+use super::errors::GitOperationError;
 use super::models::{
     GitGraph,
     GitRepositoryDetails,
+    GitRevertOutcome,
+    GitRevertPreview,
     ProjectOpenResult,
 };
 
@@ -152,5 +156,34 @@ pub fn switch_branch(
     branches::switch(
         repository_path,
         branch_name,
+    )
+}
+
+/// Preview read-only do Revert.
+///
+/// Não altera o repositório; existe para que a confirmação da interface
+/// descreva consequências reais em vez de perguntar apenas "tem certeza?".
+pub fn get_revert_preview(
+    path: &str,
+    revision: &str,
+) -> Result<GitRevertPreview, GitOperationError> {
+    let repository_path = Path::new(path);
+
+    history::get_revert_preview(
+        repository_path,
+        revision,
+    )
+}
+
+/// Executa o Revert revalidando todo o preflight antes da mutação.
+pub fn revert_commit(
+    path: &str,
+    revision: &str,
+) -> Result<GitRevertOutcome, GitOperationError> {
+    let repository_path = Path::new(path);
+
+    history::revert_commit(
+        repository_path,
+        revision,
     )
 }

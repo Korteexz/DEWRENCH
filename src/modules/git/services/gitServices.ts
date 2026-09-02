@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import type { ProjectOpenResult } from '../types/project'
 import type { GitGraph, GitRepositoryDetails } from '../types/repository'
+import type { GitRevertOutcome, GitRevertPreview } from '../types/revert'
 
 export async function openProject(
   path: string,
@@ -85,4 +86,26 @@ export async function getCommitDiff(
   revision: string,
 ): Promise<string> {
   return invoke<string>('get_commit_diff', { path, revision })
+}
+
+/**
+ * Preview read-only do Revert.
+ *
+ * Rejeita com `GitOperationError` quando alguma regra bloqueia a operação.
+ */
+export async function getRevertPreview(
+  path: string,
+  revision: string,
+): Promise<GitRevertPreview> {
+  return invoke<GitRevertPreview>('get_revert_preview', { path, revision })
+}
+
+/**
+ * Cria o commit inverso. O backend revalida todo o preflight antes de mutar.
+ */
+export async function revertCommit(
+  path: string,
+  revision: string,
+): Promise<GitRevertOutcome> {
+  return invoke<GitRevertOutcome>('revert_commit', { path, revision })
 }

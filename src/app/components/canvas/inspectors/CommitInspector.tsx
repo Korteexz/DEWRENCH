@@ -1,6 +1,12 @@
 import { useState } from 'react'
 
+import RevertPanel from '../../../../modules/git/components/RevertPanel'
 import type { GitGraphCommit } from '../../../../modules/git/types/repository'
+import type {
+  GitFailure,
+  GitRevertOutcome,
+  GitRevertPreview,
+} from '../../../../modules/git/types/revert'
 
 interface CommitInspectorProps {
   commit: GitGraphCommit
@@ -11,6 +17,13 @@ interface CommitInspectorProps {
   onClose: () => void
   onViewDiff: () => void
   onCreateBranch: (name: string) => Promise<boolean>
+  revertPreview: GitRevertPreview | null
+  revertLoading: boolean
+  revertFailure: GitFailure | null
+  revertOutcome: GitRevertOutcome | null
+  onRequestRevertPreview: () => void
+  onCancelRevert: () => void
+  onConfirmRevert: () => void
 }
 
 export default function CommitInspector({
@@ -22,6 +35,13 @@ export default function CommitInspector({
   onClose,
   onViewDiff,
   onCreateBranch,
+  revertPreview,
+  revertLoading,
+  revertFailure,
+  revertOutcome,
+  onRequestRevertPreview,
+  onCancelRevert,
+  onConfirmRevert,
 }: CommitInspectorProps) {
   const [branchName, setBranchName] = useState('')
 
@@ -63,6 +83,18 @@ export default function CommitInspector({
             <pre className="commit-diff">{diff || 'Nenhuma alteração retornada.'}</pre>
           )}
         </section>
+
+        <RevertPanel
+          commit={commit}
+          preview={revertPreview}
+          loading={revertLoading}
+          busy={busy}
+          failure={revertFailure}
+          outcome={revertOutcome}
+          onRequestPreview={onRequestRevertPreview}
+          onCancel={onCancelRevert}
+          onConfirm={onConfirmRevert}
+        />
 
         <section className="inspector-section">
           <h2>Nova branch a partir deste commit</h2>

@@ -19,6 +19,8 @@ import {
   createBranchFrom,
   createCommit,
   getCommitDiff,
+  getRevertPreview,
+  revertCommit,
   stageAll,
   stageFile,
   switchBranch,
@@ -29,6 +31,15 @@ import type {
   GitBranch,
   GitGraphCommit,
 } from '../../modules/git/types/repository'
+import type {
+  GitFailure,
+  GitRevertOutcome,
+  GitRevertPreview,
+} from '../../modules/git/types/revert'
+import {
+  describeFailure,
+  toGitFailure,
+} from '../../modules/git/types/revert'
 
 interface WorkspacePageProps {
   project: ProjectOpenResult
@@ -46,8 +57,22 @@ interface CommitDiffState {
   value: string
 }
 
+/** Estado do fluxo de Revert, sempre associado a um commit específico. */
+interface RevertState {
+  commitHash: string
+  preview: GitRevertPreview | null
+  loading: boolean
+  failure: GitFailure | null
+  outcome: GitRevertOutcome | null
+}
+
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  // Commands antigos rejeitam com string; os novos, com erro tipado.
+  return describeFailure(toGitFailure(error))
 }
 
 export default function WorkspacePage({
@@ -67,6 +92,7 @@ export default function WorkspacePage({
   const [actionError, setActionError] = useState<string | null>(null)
   const [commitDiff, setCommitDiff] = useState<CommitDiffState | null>(null)
   const [diffLoading, setDiffLoading] = useState(false)
+  const [revert, setRevert] = useState<RevertState | null>(null)
 
   const workspaceGraph = useMemo(
     () => adaptGitGraph(project, gitGraph),
@@ -178,6 +204,79 @@ export default function WorkspacePage({
     }
   }
 
+  /** Preview read-only: não muta o repositório e não confirma nada sozinho. */
+  async function handleRequestRevertPreview(commit: GitGraphCommit): Promise<void> {
+    if (busyAction || revert?.loading) {
+      return
+    }
+
+    setRevert({
+      commitHash: commit.hash,
+      preview: null,
+      loading: true,
+      failure: null,
+      outcome: null,
+    })
+
+    try {
+      const preview = await getRevertPreview(project.path, commit.hash)
+      setRevert({
+        commitHash: commit.hash,
+        preview,
+        loading: false,
+        failure: null,
+        outcome: null,
+      })
+    } catch (error) {
+      setRevert({
+        commitHash: commit.hash,
+        preview: null,
+        loading: false,
+        failure: toGitFailure(error),
+        outcome: null,
+      })
+    }
+  }
+
+  function handleCancelRevert(): void {
+    setRevert(null)
+  }
+
+  /**
+   * Executa o Revert reutilizando executeMutation: busyAction impede clique
+   * duplo e o refresh relê detalhes e grafo a partir do backend.
+   *
+   * A rejeição não é propagada porque o erro tipado é apresentado pelo
+   * RevertPanel; propagá-la duplicaria a mensagem no erro genérico da tela.
+   */
+  async function handleConfirmRevert(commit: GitGraphCommit): Promise<boolean> {
+    let succeeded = false
+
+    await executeMutation('Revert commit', async () => {
+      try {
+        const outcome = await revertCommit(project.path, commit.hash)
+        setRevert({
+          commitHash: commit.hash,
+          preview: null,
+          loading: false,
+          failure: null,
+          outcome,
+        })
+        succeeded = true
+      } catch (error) {
+        setRevert({
+          commitHash: commit.hash,
+          preview: null,
+          loading: false,
+          failure: toGitFailure(error),
+          outcome: null,
+        })
+      }
+    })
+
+    return succeeded
+  }
+
   const handleNodeClick: NodeMouseHandler<WorkspaceFlowNode> = (_event, node) => {
     setSelectedNodeId(node.id)
     setContextMenu(null)
@@ -253,6 +352,10 @@ export default function WorkspacePage({
     ? selectedNode.data.commit
     : null
 
+  function revertFor(commitHash: string): RevertState | null {
+    return revert?.commitHash === commitHash ? revert : null
+  }
+
   const inspector = selectedNode?.data.kind === 'project' ? (
     <ProjectInspector
       project={selectedNode.data.project}
@@ -288,6 +391,13 @@ export default function WorkspacePage({
       onClose={() => setSelectedNodeId(null)}
       onViewDiff={() => void handleViewDiff(selectedCommit)}
       onCreateBranch={(name) => handleCreateBranch(selectedCommit.hash, name)}
+      revertPreview={revertFor(selectedCommit.hash)?.preview ?? null}
+      revertLoading={revertFor(selectedCommit.hash)?.loading ?? false}
+      revertFailure={revertFor(selectedCommit.hash)?.failure ?? null}
+      revertOutcome={revertFor(selectedCommit.hash)?.outcome ?? null}
+      onRequestRevertPreview={() => void handleRequestRevertPreview(selectedCommit)}
+      onCancelRevert={handleCancelRevert}
+      onConfirmRevert={() => void handleConfirmRevert(selectedCommit)}
     />
   ) : null
 

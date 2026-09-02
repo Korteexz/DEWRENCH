@@ -84,6 +84,27 @@
 - Mutação: não
 - Retorno: patch textual bruto.
 
+### Revert preview
+
+- Command: `get_revert_preview`
+- Git: `rev-parse --is-inside-work-tree`, `rev-parse --verify --end-of-options <rev>^{commit}`, `rev-list --parents -n 1`, `rev-parse --git-path <marcador>`, `status --porcelain=v1 -z -uall`, `var GIT_AUTHOR_IDENT`, `diff-tree --name-status --no-renames -r -z --root`
+- Mutação: não
+- Retorno: `GitRevertPreview`
+- Erros: `GitOperationError` tipado (ver `errors.md`)
+
+### Revert commit
+
+- Command: `revert_commit`
+- Preflight: repete integralmente o preview imediatamente antes da mutação
+- Git: `revert --no-edit <hash resolvido>`; em conflito, `revert --abort`
+- Mutação: working tree, index e refs. Não reescreve histórico.
+- Retorno: `GitRevertOutcome`, com o hash do novo commit lido do Git após o sucesso
+- Bloqueios: merge commit, operação intermediária, conflito ativo, mudanças staged, identidade ausente, sobreposição com alterações locais
+- Conflito: a tentativa é abortada e o estado anterior é comprovado (HEAD, status e ausência de `REVERT_HEAD`)
+- Refresh: obrigatório após sucesso
+
+`A → B → C → D` com revert de `C` produz `A → B → C → D → C'`. O commit original permanece.
+
 ## Template obrigatório para novas operações
 
 ```text
@@ -116,10 +137,6 @@ Pode buscar e integrar alterações. Antes de implementar, decidir estratégia e
 ### Push
 
 Deve mostrar remote, branch, upstream e commits enviados. Force push fica em nível crítico e não pertence ao fluxo padrão.
-
-### Revert
-
-Cria novo commit inverso e preserva histórico. Deve prever conflitos e explicar que não apaga o commit original.
 
 ### Merge
 
