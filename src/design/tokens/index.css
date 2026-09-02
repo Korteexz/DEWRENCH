@@ -1,0 +1,6 @@
+/* Ponto único de entrada dos tokens. Nenhum valor literal vive fora daqui. */
+@import './color.css';
+@import './type.css';
+@import './space.css';
+@import './motion.css';
+@import './grid.css';

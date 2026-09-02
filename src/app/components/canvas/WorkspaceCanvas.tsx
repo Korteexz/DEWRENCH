@@ -4,6 +4,7 @@ import {
   useNodesState,
   type NodeMouseHandler,
   type ReactFlowInstance,
+  type Viewport,
 } from '@xyflow/react'
 import { useEffect, useMemo, useRef } from 'react'
 import '@xyflow/react/dist/style.css'
@@ -34,6 +35,11 @@ interface WorkspaceCanvasProps {
   onNodeContextMenu: NodeMouseHandler<WorkspaceFlowNode>
   onPaneClick: () => void
   onMoveStart: () => void
+  /**
+   * Emite a câmera real do campo (pan/zoom) para a instrumentação em volta.
+   * Deliberadamente um callback e não estado: pan dispara a cada frame.
+   */
+  onViewportChange?: (viewport: Viewport) => void
 }
 
 const FIT_VIEW_OPTIONS = {
@@ -59,6 +65,7 @@ export default function WorkspaceCanvas({
   onNodeContextMenu,
   onPaneClick,
   onMoveStart,
+  onViewportChange,
 }: WorkspaceCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkspaceFlowNode>(initialNodes)
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -124,7 +131,9 @@ export default function WorkspaceCanvas({
         nodeTypes={workspaceNodeTypes}
         onInit={(instance) => {
           flowRef.current = instance
-          void instance.fitView(FIT_VIEW_OPTIONS)
+          void instance.fitView(FIT_VIEW_OPTIONS).then(() => {
+            onViewportChange?.(instance.getViewport())
+          })
         }}
         onNodesChange={onNodesChange}
         onNodeClick={onNodeClick}
@@ -162,6 +171,7 @@ export default function WorkspaceCanvas({
         }}
         onPaneClick={onPaneClick}
         onMoveStart={onMoveStart}
+        onMove={(_event, viewport) => onViewportChange?.(viewport)}
         onPaneContextMenu={(event) => event.preventDefault()}
         nodesConnectable={false}
         edgesReconnectable={false}

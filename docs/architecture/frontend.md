@@ -11,11 +11,13 @@ O frontend React apresenta o estado, recebe intenção do usuário, chama contra
 ```text
 src/
 ├── App.tsx
+├── design/                 design system: não conhece Git, Tauri ou React Flow
+│   ├── tokens/
+│   └── primitives/
 ├── app/
 │   ├── pages/
+│   ├── shell/              chassi: AppShell, SystemBar, ModuleRail
 │   ├── components/
-│   │   ├── shell/
-│   │   ├── navigation/
 │   │   ├── canvas/
 │   │   └── effects/
 │   └── graph/
@@ -25,8 +27,13 @@ src/
     ├── hooks/
     ├── pages/
     ├── services/
-    └── types/
+    ├── types/
+    └── view/               view-models puros (working tree, estatísticas)
 ```
+
+O chassi não importa tipos de módulo: o módulo ativo injeta sua leitura na
+barra de sistema pelo slot `systemReadout` do `AppShell`. Ver
+[`ADR-006`](../decisions/ADR-006-design-system-fui.md).
 
 ## Roteamento de estado
 

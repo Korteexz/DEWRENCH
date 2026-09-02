@@ -4,7 +4,7 @@
  */
 export const deformableGridConfig = {
   /** Resting distance between grid points; keep aligned with --grid-spacing. */
-  gridSpacing: 28,
+  gridSpacing: 32,
   /** Resting radial pressure; kept low so a stationary node makes no crater. */
   displacementStrength: 0.72,
   /** Base pointer distance used to build the velocity-shaped influence field. */

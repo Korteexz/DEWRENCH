@@ -1,0 +1,382 @@
+/* ==========================================================================
+   DEWRENCH — PRIMITIVES
+   --------------------------------------------------------------------------
+   Aparência das primitivas do instrumento. Prefixo `dw-` para deixar explícito
+   o que pertence ao design system e o que ainda é CSS legado de tela.
+
+   Regra: nenhum valor literal aqui. Tudo vem de design/tokens.
+   ========================================================================== */
+
+/* -- TechnicalLabel ------------------------------------------------------- */
+.dw-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--track-wide);
+  line-height: var(--leading-tight);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dw-label[data-size='micro'] { font-size: var(--t-micro); }
+.dw-label[data-tone='hi'] { color: var(--ink-hi); }
+.dw-label[data-tone='mid'] { color: var(--ink-mid); }
+.dw-label[data-tone='low'] { color: var(--ink-low); }
+.dw-label[data-tone='faint'] { color: var(--ink-faint); }
+.dw-label[data-tone='instrument'] { color: var(--instrument-current); }
+.dw-label[data-tone='fault'] { color: var(--signal-fault); }
+
+/* -- Panel ---------------------------------------------------------------- */
+.dw-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--surface-panel);
+}
+
+.dw-panel__head {
+  display: flex;
+  height: var(--panel-head-height);
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0 var(--s3);
+  border-bottom: 1px solid var(--line-edge);
+  background: var(--surface-raised);
+}
+
+/* O índice numérico ancora o painel no chassi: o usuário aprende posições. */
+.dw-panel__index {
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-mid);
+}
+
+.dw-panel__title {
+  overflow: hidden;
+  margin: 0;
+  color: var(--ink-mid);
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--track-wide);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dw-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  margin-left: auto;
+}
+
+.dw-panel__body {
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: var(--s3);
+}
+
+.dw-panel__body--flush { padding: 0; }
+.dw-panel__body--scroll { overflow: hidden auto; }
+
+.dw-panel__foot {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  height: var(--panel-head-height);
+  padding: 0 var(--s3);
+  border-top: 1px solid var(--line-edge);
+}
+
+/* -- SectionHeader -------------------------------------------------------- */
+.dw-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 22px;
+}
+
+.dw-section-header__rule {
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--line-hair);
+}
+
+.dw-section-header__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--s1);
+}
+
+/* -- Divider -------------------------------------------------------------- */
+.dw-divider {
+  height: 1px;
+  margin: var(--s3) 0;
+  border: 0;
+  background: var(--line-hair);
+}
+
+/* -- Metric --------------------------------------------------------------- */
+.dw-metric {
+  display: grid;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.dw-metric__label {
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+
+.dw-metric__value {
+  /* Bloco, e não flex: ellipsis não funciona em container flex. */
+  display: block;
+  overflow: hidden;
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-data);
+  letter-spacing: var(--track-mid);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dw-metric__unit { margin-left: var(--s1); color: var(--ink-faint); font-size: var(--t-micro); }
+.dw-metric[data-tone='nominal'] .dw-metric__value { color: var(--signal-nominal); }
+.dw-metric[data-tone='warn'] .dw-metric__value { color: var(--signal-warn); }
+.dw-metric[data-tone='fault'] .dw-metric__value { color: var(--signal-fault); }
+.dw-metric[data-tone='instrument'] .dw-metric__value { color: var(--instrument-current); }
+
+.dw-metric-cluster {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border: 1px solid var(--line-hair);
+}
+
+.dw-metric-cluster > .dw-metric {
+  padding: var(--s2) var(--s3);
+  border-right: 1px solid var(--line-hair);
+}
+
+.dw-metric-cluster > .dw-metric:last-child { border-right: 0; }
+
+/* -- StatusIndicator ------------------------------------------------------ */
+.dw-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+
+.dw-status__mark {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+}
+
+.dw-status[data-tone='nominal'] { color: var(--signal-nominal); }
+.dw-status[data-tone='warn'] { color: var(--signal-warn); }
+.dw-status[data-tone='fault'] { color: var(--signal-fault); }
+.dw-status[data-tone='info'] { color: var(--signal-info); }
+.dw-status[data-tone='idle'] { color: var(--ink-faint); }
+
+.dw-status[data-filled='true'] .dw-status__mark { background: currentColor; }
+
+/* Pulso somente enquanto uma operação REAL está em curso. */
+.dw-status[data-live='true'] .dw-status__mark::after {
+  position: absolute;
+  inset: -3px;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: dw-ping 1.1s var(--ease-out) infinite;
+  content: '';
+}
+
+@keyframes dw-ping {
+  0% { opacity: 0.55; transform: scale(0.6); }
+  70% { opacity: 0; transform: scale(1.25); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-status[data-live='true'] .dw-status__mark::after { animation: none; }
+}
+
+/* -- TelemetryBar --------------------------------------------------------- */
+.dw-telemetry { display: grid; gap: var(--s1); min-width: 0; }
+
+.dw-telemetry__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2);
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+
+.dw-telemetry__readout { color: var(--ink-mid); }
+
+/* Barra segmentada: cada célula é uma unidade contável, não um gradiente. */
+.dw-telemetry__track {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+}
+
+.dw-telemetry__cell {
+  flex: 1 1 0;
+  background: var(--line-hair);
+  transition: background var(--m-signal) var(--ease-out);
+}
+
+.dw-telemetry__cell[data-on='true'] { background: var(--ink-mid); }
+.dw-telemetry[data-tone='nominal'] .dw-telemetry__cell[data-on='true'] { background: var(--signal-nominal); }
+.dw-telemetry[data-tone='warn'] .dw-telemetry__cell[data-on='true'] { background: var(--signal-warn); }
+.dw-telemetry[data-tone='fault'] .dw-telemetry__cell[data-on='true'] { background: var(--signal-fault); }
+.dw-telemetry[data-tone='instrument'] .dw-telemetry__cell[data-on='true'] { background: var(--instrument-current); }
+
+/* -- DataRow -------------------------------------------------------------- */
+.dw-data-row {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: var(--row-height);
+  align-items: center;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--s2);
+  padding: var(--s1) var(--s3) var(--s1) var(--s2);
+  border: 0;
+  border-bottom: 1px solid var(--line-hair);
+  background: transparent;
+  color: var(--ink-mid);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  text-align: left;
+  transition: background var(--m-instant) var(--ease-out);
+}
+
+/* Barra de seleção à esquerda: estado por posição e contraste, não por cor. */
+.dw-data-row::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: transparent;
+  content: '';
+  transition: background var(--m-signal) var(--ease-out);
+}
+
+.dw-data-row:hover { background: var(--surface-hover); }
+.dw-data-row[data-selected='true'] { background: var(--wash-active); color: var(--ink-hi); }
+.dw-data-row[data-selected='true']::before { background: var(--signal-active); }
+.dw-data-row__lead { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 14px; color: var(--ink-faint); }
+.dw-data-row__main { display: grid; min-width: 0; gap: 2px; }
+.dw-data-row__primary { overflow: hidden; color: inherit; font-size: var(--t-data); letter-spacing: var(--track-mid); text-overflow: ellipsis; white-space: nowrap; }
+.dw-data-row__secondary { overflow: hidden; color: var(--ink-low); font-family: var(--font-sans); font-size: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
+.dw-data-row__trail { flex: 0 0 auto; color: var(--ink-faint); font-size: var(--t-micro); letter-spacing: var(--track-mid); }
+.dw-data-row__tag {
+  padding: 1px var(--s1);
+  border: 1px solid var(--instrument-current);
+  color: var(--instrument-current);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-mid);
+}
+
+/* -- CoordinateLabel ------------------------------------------------------ */
+.dw-coord {
+  display: inline-flex;
+  gap: var(--s2);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-mid);
+  white-space: nowrap;
+}
+
+.dw-coord b { color: var(--ink-low); font-weight: var(--weight-regular); }
+
+/* -- InstrumentFrame ------------------------------------------------------ */
+.dw-frame { position: absolute; inset: 0; pointer-events: none; }
+
+.dw-frame__corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--rule-tick);
+}
+
+.dw-frame__corner--tl { top: 6px; left: 6px; border-right: 0; border-bottom: 0; }
+.dw-frame__corner--tr { top: 6px; right: 6px; border-bottom: 0; border-left: 0; }
+.dw-frame__corner--bl { bottom: 6px; left: 6px; border-top: 0; border-right: 0; }
+.dw-frame__corner--br { right: 6px; bottom: 6px; border-top: 0; border-left: 0; }
+
+/* Réguas: escala real do campo, ancoradas nos cantos do compartimento. */
+.dw-frame__rule { position: absolute; background-repeat: repeat; }
+.dw-frame__rule--x {
+  right: 22px;
+  bottom: 6px;
+  left: 22px;
+  height: 5px;
+  background-image: repeating-linear-gradient(90deg, var(--rule-tick) 0 1px, transparent 1px var(--rule-tick-minor));
+}
+.dw-frame__rule--y {
+  top: 22px;
+  bottom: 22px;
+  left: 6px;
+  width: 5px;
+  background-image: repeating-linear-gradient(180deg, var(--rule-tick) 0 1px, transparent 1px var(--rule-tick-minor));
+}
+
+/* -- Button --------------------------------------------------------------- */
+.dw-button {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s1);
+  padding: 0 var(--s2);
+  border: 1px solid var(--line-edge);
+  background: transparent;
+  color: var(--ink-mid);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  transition:
+    border-color var(--m-instant) var(--ease-out),
+    color var(--m-instant) var(--ease-out),
+    background var(--m-instant) var(--ease-out);
+}
+
+.dw-button:hover:not(:disabled) { border-color: var(--line-strong); color: var(--ink-hi); }
+.dw-button:disabled { cursor: not-allowed; opacity: 0.38; }
+.dw-button[data-size='md'] { min-height: 30px; padding: 0 var(--s3); font-size: var(--t-label); }
+.dw-button[data-variant='primary'] { border-color: var(--instrument-current); color: var(--instrument-current); }
+.dw-button[data-variant='primary']:hover:not(:disabled) { background: var(--wash-instrument); }
+.dw-button[data-variant='danger'] { border-color: var(--signal-fault); color: var(--signal-fault); }
+.dw-button[data-variant='danger']:hover:not(:disabled) { background: var(--wash-fault); }
+.dw-button[data-busy='true'] { cursor: progress; }

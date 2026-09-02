@@ -1,0 +1,30 @@
+/* ==========================================================================
+   DEWRENCH — TYPE
+   --------------------------------------------------------------------------
+   Monospace é identidade, não estilização: alinha colunas, hashes, números e
+   coordenadas. Densidade se obtém por escala e tracking, NUNCA reduzindo a
+   fonte abaixo do legível — 10px é o piso absoluto do sistema.
+   ========================================================================== */
+
+:root {
+  --font-mono: "Cascadia Code", "JetBrains Mono", "SFMono-Regular", Consolas, ui-monospace, monospace;
+  --font-sans: Inter, "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
+
+  /* Escala: 6 degraus. Não existe font-size fora daqui. */
+  --t-micro: 10px;   /* índice, unidade, coordenada */
+  --t-label: 11px;   /* rótulo técnico em caixa alta */
+  --t-body: 12px;    /* texto corrente da interface */
+  --t-data: 13px;    /* valor de dado, hash, nome de branch */
+  --t-head: 15px;    /* título de compartimento */
+  --t-display: 19px; /* título de tela */
+
+  --track-wide: 0.16em;   /* rótulos em caixa alta */
+  --track-mid: 0.06em;    /* dados monospace */
+  --track-tight: -0.01em; /* títulos grandes */
+
+  --leading-tight: 1.25;
+  --leading-body: 1.5;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+}

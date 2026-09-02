@@ -1,0 +1,470 @@
+/* ==========================================================================
+   DEWRENCH — MÓDULO GIT / SUPERFÍCIE
+   --------------------------------------------------------------------------
+   Estilos do deck do Git: disposição dos compartimentos, índice, campo de
+   topologia e inspetor. Usa exclusivamente tokens do design system.
+
+   O que ainda está em App.css (nós, edges, grid do canvas, menu de contexto)
+   pertence à segunda fatia do redesign e continua com o CSS anterior.
+   ========================================================================== */
+
+.git-workspace {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns:
+    var(--chassis-pane-left)
+    minmax(0, 1fr)
+    var(--chassis-pane-right);
+  gap: var(--chassis-gap);
+  background: var(--line-edge); /* a junta entre compartimentos é a própria borda */
+}
+
+/* -- 01 ÍNDICE ------------------------------------------------------------ */
+.git-sidebar { border-right: 0; }
+
+.git-sidebar__subject {
+  padding: var(--s2) 0 var(--s3);
+  border-bottom: 1px solid var(--line-edge);
+}
+
+.git-sidebar__subject .dw-data-row { border-bottom: 0; }
+
+.git-sidebar__subject-mark {
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--instrument-current);
+  border-radius: 50%;
+}
+
+.git-sidebar__telemetry { padding: var(--s2) var(--s3) 0; }
+
+.git-sidebar__section { padding: var(--s3) 0 0; }
+.git-sidebar__section > .dw-section-header { padding: 0 var(--s3) var(--s2); }
+.git-sidebar__list { display: grid; }
+
+/* Marcadores de topologia: forma carrega a semântica, cor apenas reforça. */
+.git-sidebar__branch-mark {
+  width: 6px;
+  height: 6px;
+  background: var(--ink-faint);
+  transform: rotate(45deg);
+}
+
+.dw-data-row[data-selected='true'] .git-sidebar__branch-mark { background: var(--ink-hi); }
+
+.git-sidebar__commit-mark {
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--ink-faint);
+  border-radius: 50%;
+}
+
+.git-sidebar__commit-mark[data-merge='true'] {
+  border-color: var(--signal-info);
+  box-shadow: inset 0 0 0 2px var(--surface-panel), inset 0 0 0 3px var(--signal-info);
+}
+
+.git-sidebar__commit-mark[data-root='true'] { background: var(--ink-faint); }
+.dw-data-row[data-selected='true'] .git-sidebar__commit-mark { border-color: var(--ink-hi); }
+
+/* -- 02 CAMPO DE TOPOLOGIA ------------------------------------------------ */
+.git-graph-viewport {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: var(--panel-head-height) minmax(0, 1fr) var(--panel-head-height);
+  background: var(--surface-void);
+}
+
+.git-graph-viewport__bar,
+.git-graph-viewport__foot {
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: 0 var(--s3);
+  background: var(--surface-panel);
+}
+
+.git-graph-viewport__bar { border-bottom: 1px solid var(--line-edge); }
+.git-graph-viewport__foot { border-top: 1px solid var(--line-edge); }
+.git-graph-viewport__bar-rule { flex: 1 1 auto; height: 1px; background: var(--line-hair); }
+
+/* Ref Git (branch, tag, hash): caixa preservada — 'Main' e 'main' são refs
+   diferentes, então uppercase decorativo aqui seria informação incorreta. */
+.git-graph-viewport__ref {
+  overflow: hidden;
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  letter-spacing: var(--track-mid);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.git-graph-viewport__foot > :last-child { margin-left: auto; }
+
+.git-graph-viewport__field {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.git-graph-viewport__legend {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+}
+
+.git-graph-viewport__legend span { display: flex; align-items: center; gap: var(--s1); }
+.git-graph-viewport__legend i { display: block; width: 6px; height: 6px; }
+.git-graph-viewport__legend i[data-mark='project'] { border-radius: 50%; background: var(--instrument-current); }
+.git-graph-viewport__legend i[data-mark='commit'] { border: 1px solid var(--ink-low); border-radius: 50%; }
+.git-graph-viewport__legend i[data-mark='merge'] { border: 1px solid var(--signal-info); border-radius: 50%; box-shadow: inset 0 0 0 2px var(--surface-panel), inset 0 0 0 3px var(--signal-info); }
+.git-graph-viewport__legend i[data-mark='branch'] { border: 1px solid var(--ink-low); transform: rotate(45deg) scale(0.85); }
+
+.git-graph-viewport__error {
+  position: absolute;
+  z-index: 9;
+  top: calc(var(--panel-head-height) + var(--s3));
+  right: var(--s4);
+  left: var(--s4);
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--signal-fault);
+  border-left-width: 2px;
+  background: var(--surface-panel);
+  color: var(--signal-fault);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  line-height: var(--leading-body);
+}
+
+/* -- Leitura do módulo na barra de sistema -------------------------------- */
+.git-system-readout {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--s4);
+}
+
+.git-system-readout__field {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.git-system-readout__field b {
+  overflow: hidden;
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--track-mid);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-system-readout__field b[data-dirty='true'] { color: var(--instrument-current); }
+
+/* -- 03 INSPETOR ---------------------------------------------------------- */
+.git-inspector-pane { border-left: 0; }
+.git-inspector-pane > .dw-panel__body { display: flex; flex-direction: column; }
+
+.git-inspector-standby { display: grid; gap: var(--s3); align-content: start; }
+
+/* Retícula de repouso: o instrumento está ligado e aguardando um alvo. */
+.git-inspector-standby__crosshair {
+  position: relative;
+  display: grid;
+  height: 72px;
+  place-items: center;
+  border: 1px solid var(--line-hair);
+  background:
+    repeating-linear-gradient(90deg, var(--rule-line) 0 1px, transparent 1px var(--rule-tick-minor)),
+    repeating-linear-gradient(180deg, var(--rule-line) 0 1px, transparent 1px var(--rule-tick-minor));
+}
+
+.git-inspector-standby__crosshair span { position: absolute; background: var(--line-edge); }
+.git-inspector-standby__crosshair span:first-child { top: 50%; right: 0; left: 0; height: 1px; }
+.git-inspector-standby__crosshair span:nth-child(2) { top: 0; bottom: 0; left: 50%; width: 1px; }
+.git-inspector-standby__crosshair i {
+  z-index: 1;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--ink-low);
+  background: var(--surface-panel);
+}
+
+.git-inspector-standby__hint {
+  margin: 0;
+  color: var(--ink-low);
+  font-size: var(--t-body);
+  line-height: var(--leading-body);
+}
+
+.git-inspector-standby__telemetry { display: grid; gap: var(--s3); }
+
+.git-inspector-standby__path {
+  overflow: hidden;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   INSPETORES DE OBJETO (project / branch / commit)
+   --------------------------------------------------------------------------
+   Os componentes ainda são os originais — apenas a pele foi migrada para os
+   tokens. A reestruturação deles em primitivas é a próxima fatia.
+   ========================================================================== */
+
+.canvas-inspector {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.canvas-inspector__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--line-edge);
+}
+
+.canvas-inspector__header > div { display: grid; min-width: 0; gap: var(--s1); }
+
+.canvas-inspector__header span {
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+
+.canvas-inspector__header strong {
+  overflow: hidden;
+  color: var(--ink-hi);
+  font-size: var(--t-head);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--track-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-inspector__header button {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line-edge);
+  background: transparent;
+  color: var(--ink-low);
+  cursor: pointer;
+  font-size: var(--t-body);
+  line-height: 1;
+  transition: color var(--m-instant) var(--ease-out), border-color var(--m-instant) var(--ease-out);
+}
+
+.canvas-inspector__header button:hover { border-color: var(--line-strong); color: var(--ink-hi); }
+
+.canvas-inspector__content { min-height: 0; flex: 1 1 auto; overflow: hidden auto; }
+
+.inspector-summary,
+.inspector-details { display: grid; margin: 0; }
+
+.inspector-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line-hair);
+}
+
+.inspector-summary > div { display: grid; gap: var(--s1); padding: var(--s2) var(--s3); border-right: 1px solid var(--line-hair); }
+.inspector-summary > div:last-child { border-right: 0; }
+.inspector-details { gap: var(--s2); }
+.inspector-details > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--s2); }
+
+.inspector-summary dt,
+.inspector-details dt {
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+
+.inspector-summary dd,
+.inspector-details dd {
+  overflow: hidden;
+  margin: 0;
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  letter-spacing: var(--track-mid);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-section { margin-top: var(--s4); padding-top: var(--s3); border-top: 1px solid var(--line-hair); }
+
+.inspector-section h2 {
+  margin: 0 0 var(--s2);
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+
+.inspector-section__heading { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.inspector-section__heading h2 { margin-bottom: 0; }
+.inspector-section__actions { display: flex; align-items: center; gap: var(--s1); }
+
+/* Botões e campos dos inspetores compartilham a pele do design system. */
+.inspector-form button,
+.inspector-action,
+.inspector-section__actions button,
+.file-status-list__actions button {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--s2);
+  border: 1px solid var(--line-edge);
+  background: transparent;
+  color: var(--ink-mid);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  transition: border-color var(--m-instant) var(--ease-out), color var(--m-instant) var(--ease-out), background var(--m-instant) var(--ease-out);
+}
+
+.inspector-form button:hover:not(:disabled),
+.inspector-action:hover:not(:disabled),
+.inspector-section__actions button:hover:not(:disabled),
+.file-status-list__actions button:hover:not(:disabled) { border-color: var(--line-strong); color: var(--ink-hi); }
+
+.inspector-form button:disabled,
+.inspector-action:disabled,
+.inspector-section__actions button:disabled,
+.file-status-list__actions button:disabled { cursor: not-allowed; opacity: 0.38; }
+
+.inspector-form { display: grid; gap: var(--s2); }
+
+.inspector-form input {
+  min-height: 30px;
+  padding: 0 var(--s2);
+  border: 1px solid var(--line-edge);
+  background: var(--surface-input);
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+}
+
+.inspector-form input::placeholder { color: var(--ink-faint); }
+.inspector-form .inspector-button--primary { border-color: var(--instrument-current); color: var(--instrument-current); }
+.inspector-form .inspector-button--primary:hover:not(:disabled) { background: var(--wash-instrument); }
+.inspector-action { width: 100%; margin-top: var(--s4); min-height: 30px; }
+
+.file-status-list,
+.recent-commit-list { display: grid; gap: var(--s1); margin: var(--s2) 0 0; padding: 0; list-style: none; }
+
+.file-status-list li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line-hair);
+}
+
+.file-status-list__file { display: flex; min-width: 0; align-items: center; gap: var(--s2); }
+.file-status-list__file code { flex: 0 0 auto; color: var(--instrument-current); font-size: var(--t-micro); letter-spacing: var(--track-mid); }
+.file-status-list__file span { overflow: hidden; color: var(--ink-mid); font-family: var(--font-mono); font-size: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
+.file-status-list__actions { display: flex; flex: 0 0 auto; gap: var(--s1); }
+
+.recent-commit-list li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px var(--s2); }
+.recent-commit-list code { overflow: hidden; color: var(--instrument-current); font-size: var(--t-micro); text-overflow: ellipsis; }
+.recent-commit-list span { overflow: hidden; color: var(--ink-hi); font-size: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
+.recent-commit-list small { grid-column: 2; color: var(--ink-low); font-size: var(--t-micro); }
+
+.inspector-empty { color: var(--ink-low); font-size: var(--t-body); }
+
+.inspector-error {
+  margin: var(--s2) 0 0;
+  padding: var(--s2);
+  border-left: 2px solid var(--signal-fault);
+  background: var(--wash-fault);
+  color: var(--signal-fault);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  line-height: var(--leading-body);
+}
+
+.canvas-inspector__path { display: block; overflow: hidden; margin-top: var(--s4); color: var(--ink-faint); font-family: var(--font-mono); font-size: var(--t-micro); text-overflow: ellipsis; white-space: nowrap; }
+
+/* Diff continua texto bruto do Git: monospace legível, sem colorização falsa. */
+.commit-diff {
+  max-height: min(340px, 36vh);
+  overflow: auto;
+  margin: var(--s2) 0 0;
+  padding: var(--s3);
+  border: 1px solid var(--line-hair);
+  background: var(--surface-void);
+  color: var(--ink-mid);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  line-height: var(--leading-body);
+  white-space: pre;
+}
+
+/* -- Compactação do deck -------------------------------------------------- */
+@media (max-width: 1180px) {
+  :root { --chassis-pane-left: 232px; --chassis-pane-right: 288px; }
+}
+
+@media (max-width: 940px) {
+  .git-workspace { grid-template-columns: var(--chassis-pane-left) minmax(0, 1fr); }
+
+  .git-inspector-pane {
+    position: absolute;
+    z-index: 12;
+    top: var(--s2);
+    right: var(--s2);
+    bottom: var(--s2);
+    display: none;
+    width: min(320px, calc(100vw - var(--chassis-pane-left) - var(--s6)));
+    border: 1px solid var(--line-strong);
+  }
+
+  .git-inspector-pane:has(.canvas-inspector) { display: flex; }
+  .git-graph-viewport__legend { display: none; }
+}
+
+@media (max-width: 680px) {
+  .git-workspace { display: block; }
+  .git-sidebar { display: none; }
+  .git-graph-viewport { width: 100%; height: 100%; }
+  .git-inspector-pane { width: min(330px, calc(100vw - var(--s5))); }
+  .graph-viewport-readout { display: none; }
+}

@@ -1,0 +1,18 @@
+/* ==========================================================================
+   DEWRENCH — GRID & RULES
+   --------------------------------------------------------------------------
+   A grade é referencial de medição, não papel de parede. Ela existe para dar
+   escala ao campo observado e para ancorar coordenadas reais do viewport.
+   ========================================================================== */
+
+:root {
+  --grid-spacing: 32px;
+  --grid-dot: rgba(154, 163, 166, 0.16);
+  --grid-lighting-strength: 0.02;
+
+  /* Réguas e marcações de instrumento */
+  --rule-tick: rgba(154, 163, 166, 0.2);
+  --rule-line: rgba(154, 163, 166, 0.09);
+  --rule-tick-major: 64px;
+  --rule-tick-minor: 16px;
+}

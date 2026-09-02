@@ -1,10 +1,13 @@
 import { useState } from 'react'
 
 import type { ProjectOpenResult } from '../../../../modules/git/types/project'
-import type {
-  GitFileStatus,
-  GitRepositoryDetails,
-} from '../../../../modules/git/types/repository'
+import type { GitRepositoryDetails } from '../../../../modules/git/types/repository'
+import {
+  hasUnstagedChanges,
+  isStaged,
+  statusLabel,
+  summarizeWorkingTree,
+} from '../../../../modules/git/view/workingTree'
 
 interface ProjectInspectorProps {
   project: ProjectOpenResult
@@ -18,18 +21,6 @@ interface ProjectInspectorProps {
   onStageAll: () => Promise<boolean>
   onUnstage: (file: string) => Promise<boolean>
   onCommit: (message: string) => Promise<boolean>
-}
-
-function isStaged(file: GitFileStatus): boolean {
-  return ![' ', '?', '!'].includes(file.index_status)
-}
-
-function hasUnstagedChanges(file: GitFileStatus): boolean {
-  return ![' ', '!'].includes(file.worktree_status)
-}
-
-function statusLabel(file: GitFileStatus): string {
-  return `${file.index_status}${file.worktree_status}`.replaceAll(' ', '·')
 }
 
 export default function ProjectInspector({
@@ -47,8 +38,9 @@ export default function ProjectInspector({
 }: ProjectInspectorProps) {
   const [message, setMessage] = useState('')
   const files = details?.files ?? []
-  const unstagedCount = files.filter(hasUnstagedChanges).length
-  const stagedCount = files.filter(isStaged).length
+  const summary = summarizeWorkingTree(files)
+  const unstagedCount = summary.unstaged
+  const stagedCount = summary.staged
 
   async function handleCommit() {
     const committed = await onCommit(message)

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { NodeMouseHandler } from '@xyflow/react'
 
-import AppShell from '../components/shell/AppShell'
+import AppShell from '../shell/AppShell'
 import BranchInspector from '../components/canvas/inspectors/BranchInspector'
 import CommitInspector from '../components/canvas/inspectors/CommitInspector'
 import ProjectInspector from '../components/canvas/inspectors/ProjectInspector'
@@ -14,6 +14,7 @@ import { adaptGitGraph } from '../../modules/git/adapters/gitGraphAdapter'
 import GitGraphViewport from '../../modules/git/components/GitGraphViewport'
 import GitInspectorPane from '../../modules/git/components/GitInspectorPane'
 import GitSidebar from '../../modules/git/components/GitSidebar'
+import GitSystemReadout from '../../modules/git/components/GitSystemReadout'
 import { useGitGraph } from '../../modules/git/hooks/useGitGraph'
 import {
   createBranchFrom,
@@ -36,6 +37,10 @@ import type {
   GitRevertOutcome,
   GitRevertPreview,
 } from '../../modules/git/types/revert'
+
+// Folha do deck do Git. Fica aqui enquanto esta página for o container do
+// módulo; ela acompanha o container quando ele migrar para modules/git.
+import '../../modules/git/git-workspace.css'
 import {
   describeFailure,
   toGitFailure,
@@ -403,9 +408,17 @@ export default function WorkspacePage({
 
   return (
     <AppShell
-      project={project}
-      branch={repositoryDetails?.branch ?? null}
-      connected={gitGraph !== null}
+      projectName={project.name}
+      projectPath={project.path}
+      activeModule="git"
+      systemReadout={(
+        <GitSystemReadout
+          details={repositoryDetails}
+          linked={gitGraph !== null}
+          loading={loading}
+          activity={busyAction}
+        />
+      )}
       onOpenAnotherProject={onOpenAnotherProject}
     >
       <div className="git-workspace">
@@ -442,7 +455,11 @@ export default function WorkspacePage({
           onMoveStart={closeContextMenu}
         />
 
-        <GitInspectorPane project={project} details={repositoryDetails}>
+        <GitInspectorPane
+          project={project}
+          details={repositoryDetails}
+          graph={gitGraph}
+        >
           {inspector}
         </GitInspectorPane>
       </div>

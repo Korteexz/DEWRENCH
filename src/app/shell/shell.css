@@ -1,0 +1,164 @@
+/* ==========================================================================
+   DEWRENCH — CHASSI
+   --------------------------------------------------------------------------
+   Barra de sistema + deck de instrumentos. Nada aqui conhece Git: o módulo
+   ativo injeta sua própria leitura via slot.
+   ========================================================================== */
+
+.dw-shell {
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  grid-template-rows: var(--chassis-bar-height) minmax(0, 1fr);
+  background: var(--surface-void);
+}
+
+/* Identidade do instrumento montado, resolvida uma única vez no chassi. */
+.dw-shell[data-module='git'] { --instrument-current: var(--instrument-git); }
+.dw-shell[data-module='docker'] { --instrument-current: var(--instrument-docker); }
+.dw-shell[data-module='database'] { --instrument-current: var(--instrument-db); }
+.dw-shell[data-module='rrf'] { --instrument-current: var(--instrument-rrf); }
+
+.dw-shell__deck {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* -- Barra de sistema ----------------------------------------------------- */
+.dw-systembar {
+  display: grid;
+  align-items: center;
+  grid-template-columns: minmax(0, auto) 1fr minmax(0, auto);
+  gap: var(--s5);
+  padding: 0 var(--s3);
+  border-bottom: 1px solid var(--line-edge);
+  background: var(--surface-panel);
+}
+
+.dw-systembar__identity {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+/* Marca: um quadrado usinado, sem logotipo desenhado. */
+.dw-systembar__mark {
+  width: 9px;
+  height: 9px;
+  align-self: center;
+  border: 1px solid var(--instrument-current);
+  box-shadow: inset 0 0 0 2px var(--surface-panel), inset 0 0 0 3px var(--instrument-current);
+}
+
+.dw-systembar__wordmark {
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-data);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--track-wide);
+}
+
+.dw-systembar__subject {
+  overflow: hidden;
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  letter-spacing: var(--track-mid);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dw-systembar__readout {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--s3);
+  justify-self: end;
+}
+
+/* -- Trilho de instrumentos ----------------------------------------------- */
+.dw-module-rail {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  justify-self: center;
+}
+
+.dw-module-rail__slot {
+  position: relative;
+  display: flex;
+  height: 26px;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0 var(--s3);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  transition: color var(--m-instant) var(--ease-out), border-color var(--m-instant) var(--ease-out);
+}
+
+.dw-module-rail__mark {
+  width: 5px;
+  height: 5px;
+  border: 1px solid currentColor;
+}
+
+.dw-module-rail__slot[data-available='true'] { color: var(--ink-mid); }
+.dw-module-rail__slot[data-available='true']:hover { color: var(--ink-hi); }
+
+.dw-module-rail__slot[data-active='true'] {
+  border-color: var(--line-edge);
+  background: var(--surface-raised);
+  color: var(--ink-hi);
+}
+
+.dw-module-rail__slot[data-active='true'] .dw-module-rail__mark {
+  border-color: var(--instrument-current);
+  background: var(--instrument-current);
+}
+
+/* Traço inferior identifica QUAL instrumento está lendo a viewport. */
+.dw-module-rail__slot[data-active='true']::after {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  left: -1px;
+  height: 1px;
+  background: var(--instrument-current);
+  content: '';
+}
+
+.dw-module-rail__state {
+  color: var(--ink-faint);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-mid);
+}
+
+.dw-module-rail__slot[data-touched='true'] {
+  animation: dw-slot-reject var(--m-transit) var(--ease-out);
+}
+
+@keyframes dw-slot-reject {
+  0%, 100% { transform: translateX(0); }
+  30% { transform: translateX(-2px); }
+  65% { transform: translateX(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-module-rail__slot[data-touched='true'] { animation: none; }
+}
+
+/* -- Compactação: o chassi cede o trilho antes de ceder a leitura --------- */
+@media (max-width: 1180px) {
+  .dw-module-rail__state { display: none; }
+}
+
+@media (max-width: 940px) {
+  .dw-systembar { grid-template-columns: minmax(0, 1fr) minmax(0, auto); gap: var(--s3); }
+  .dw-module-rail { display: none; }
+}
