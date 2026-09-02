@@ -137,6 +137,10 @@ export default function WorkspacePage({
   )
 }
 
+  function handleStage(file: string): Promise<boolean> {
+    return executeMutation('Stage file', () => stageFile(project.path, file))
+  }
+
   function handleUnstage(file: string): Promise<boolean> {
     return executeMutation('Unstage file', () => unstageFile(project.path, file))
   }
@@ -258,7 +262,7 @@ export default function WorkspacePage({
       error={visibleError}
       onClose={() => setSelectedNodeId(null)}
       onRefresh={() => void handleRefresh()}
-      onStage={handleUnstage}
+      onStage={handleStage}
       onStageAll={handleStageAll}
       onUnstage={handleUnstage}
       onCommit={handleCommit}

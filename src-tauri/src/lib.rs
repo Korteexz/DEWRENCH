@@ -20,8 +20,6 @@ pub fn run() {
             modules::git::commands::create_repository,
             modules::git::commands::get_repository_details,
             modules::git::commands::get_repository_graph,
-            modules::git::commands::stage_file,
-            modules::git::commands::unstage_file,
             modules::git::commands::create_commit,
             modules::git::commands::get_commit_diff,
             modules::git::commands::stage_file,
