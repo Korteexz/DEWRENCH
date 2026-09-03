@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { NodeMouseHandler } from '@xyflow/react'
 
-import AppShell from '../components/shell/AppShell'
+import AppShell from '../shell/AppShell'
+import { SplitDeck } from '../../design'
 import BranchInspector from '../components/canvas/inspectors/BranchInspector'
 import CommitInspector from '../components/canvas/inspectors/CommitInspector'
 import ProjectInspector from '../components/canvas/inspectors/ProjectInspector'
@@ -14,11 +15,26 @@ import { adaptGitGraph } from '../../modules/git/adapters/gitGraphAdapter'
 import GitGraphViewport from '../../modules/git/components/GitGraphViewport'
 import GitInspectorPane from '../../modules/git/components/GitInspectorPane'
 import GitSidebar from '../../modules/git/components/GitSidebar'
+import GitSystemReadout from '../../modules/git/components/GitSystemReadout'
 import { useGitGraph } from '../../modules/git/hooks/useGitGraph'
+import { useGitSync } from '../../modules/git/hooks/useGitSync'
+import { useActivity } from '../../activity/useActivity'
+import TemporalSurface from '../../activity/TemporalSurface'
+import TemporalInspector from '../../activity/TemporalInspector'
+import {
+  buildMatrix,
+  drillInto,
+  withEmptyCells,
+  type TemporalCell,
+  type TemporalRange,
+  type TemporalScale,
+} from '../../activity/temporal'
 import {
   createBranchFrom,
   createCommit,
   getCommitDiff,
+  getRevertPreview,
+  revertCommit,
   stageAll,
   stageFile,
   switchBranch,
@@ -29,6 +45,19 @@ import type {
   GitBranch,
   GitGraphCommit,
 } from '../../modules/git/types/repository'
+import type {
+  GitFailure,
+  GitRevertOutcome,
+  GitRevertPreview,
+} from '../../modules/git/types/revert'
+
+// Folha do deck do Git. Fica aqui enquanto esta página for o container do
+// módulo; ela acompanha o container quando ele migrar para modules/git.
+import '../../modules/git/git-workspace.css'
+import {
+  describeFailure,
+  toGitFailure,
+} from '../../modules/git/types/revert'
 
 interface WorkspacePageProps {
   project: ProjectOpenResult
@@ -46,8 +75,22 @@ interface CommitDiffState {
   value: string
 }
 
+/** Estado do fluxo de Revert, sempre associado a um commit específico. */
+interface RevertState {
+  commitHash: string
+  preview: GitRevertPreview | null
+  loading: boolean
+  failure: GitFailure | null
+  outcome: GitRevertOutcome | null
+}
+
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  // Commands antigos rejeitam com string; os novos, com erro tipado.
+  return describeFailure(toGitFailure(error))
 }
 
 export default function WorkspacePage({
@@ -67,6 +110,54 @@ export default function WorkspacePage({
   const [actionError, setActionError] = useState<string | null>(null)
   const [commitDiff, setCommitDiff] = useState<CommitDiffState | null>(null)
   const [diffLoading, setDiffLoading] = useState(false)
+  const [revert, setRevert] = useState<RevertState | null>(null)
+
+  /**
+   * Superfície do compartimento central. Topologia e matriz temporal são dois
+   * instrumentos sobre o MESMO repositório; trocar de instrumento não perde a
+   * seleção do outro.
+   */
+  const [surface, setSurface] = useState<'topology' | 'temporal'>('topology')
+  const [temporalScale, setTemporalScale] = useState<TemporalScale>('month')
+  const [temporalRange, setTemporalRange] = useState<TemporalRange | null>(null)
+  const [temporalCell, setTemporalCell] = useState<TemporalCell | null>(null)
+
+  const sync = useGitSync(project.path, () => void refresh().catch(() => undefined))
+  const activity = useActivity(project.path, project.git_state === 'repository')
+
+  const temporalMatrix = useMemo(
+    () => withEmptyCells(
+      buildMatrix(activity.stream?.events ?? [], temporalScale, temporalRange),
+    ),
+    [activity.stream, temporalRange, temporalScale],
+  )
+
+  /**
+   * O seletor de instrumento é o mesmo objeto nas duas superfícies: trocar de
+   * vista não pode parecer trocar de tela.
+   */
+  const surfaceSwitch = (
+    <span className="diff-view__modes" role="group" aria-label="Instrumento do compartimento">
+      <button
+        className="diff-view__mode"
+        type="button"
+        data-active={surface === 'topology'}
+        aria-pressed={surface === 'topology'}
+        onClick={() => setSurface('topology')}
+      >
+        TOPOLOGIA
+      </button>
+      <button
+        className="diff-view__mode"
+        type="button"
+        data-active={surface === 'temporal'}
+        aria-pressed={surface === 'temporal'}
+        onClick={() => setSurface('temporal')}
+      >
+        TEMPORAL
+      </button>
+    </span>
+  )
 
   const workspaceGraph = useMemo(
     () => adaptGitGraph(project, gitGraph),
@@ -113,6 +204,7 @@ export default function WorkspacePage({
     try {
       await operation()
       await refresh()
+      void activity.reload()
       return true
     } catch (error) {
       setActionError(getErrorMessage(error))
@@ -176,6 +268,79 @@ export default function WorkspacePage({
     } finally {
       setDiffLoading(false)
     }
+  }
+
+  /** Preview read-only: não muta o repositório e não confirma nada sozinho. */
+  async function handleRequestRevertPreview(commit: GitGraphCommit): Promise<void> {
+    if (busyAction || revert?.loading) {
+      return
+    }
+
+    setRevert({
+      commitHash: commit.hash,
+      preview: null,
+      loading: true,
+      failure: null,
+      outcome: null,
+    })
+
+    try {
+      const preview = await getRevertPreview(project.path, commit.hash)
+      setRevert({
+        commitHash: commit.hash,
+        preview,
+        loading: false,
+        failure: null,
+        outcome: null,
+      })
+    } catch (error) {
+      setRevert({
+        commitHash: commit.hash,
+        preview: null,
+        loading: false,
+        failure: toGitFailure(error),
+        outcome: null,
+      })
+    }
+  }
+
+  function handleCancelRevert(): void {
+    setRevert(null)
+  }
+
+  /**
+   * Executa o Revert reutilizando executeMutation: busyAction impede clique
+   * duplo e o refresh relê detalhes e grafo a partir do backend.
+   *
+   * A rejeição não é propagada porque o erro tipado é apresentado pelo
+   * RevertPanel; propagá-la duplicaria a mensagem no erro genérico da tela.
+   */
+  async function handleConfirmRevert(commit: GitGraphCommit): Promise<boolean> {
+    let succeeded = false
+
+    await executeMutation('Revert commit', async () => {
+      try {
+        const outcome = await revertCommit(project.path, commit.hash)
+        setRevert({
+          commitHash: commit.hash,
+          preview: null,
+          loading: false,
+          failure: null,
+          outcome,
+        })
+        succeeded = true
+      } catch (error) {
+        setRevert({
+          commitHash: commit.hash,
+          preview: null,
+          loading: false,
+          failure: toGitFailure(error),
+          outcome: null,
+        })
+      }
+    })
+
+    return succeeded
   }
 
   const handleNodeClick: NodeMouseHandler<WorkspaceFlowNode> = (_event, node) => {
@@ -253,10 +418,31 @@ export default function WorkspacePage({
     ? selectedNode.data.commit
     : null
 
-  const inspector = selectedNode?.data.kind === 'project' ? (
+  function revertFor(commitHash: string): RevertState | null {
+    return revert?.commitHash === commitHash ? revert : null
+  }
+
+  const temporalDrill = temporalCell && drillInto(temporalCell.scale)
+    ? () => {
+        setTemporalRange({ scale: temporalCell.scale, key: temporalCell.key })
+        setTemporalScale(drillInto(temporalCell.scale)!)
+        setTemporalCell(null)
+      }
+    : null
+
+  const inspector = surface === 'temporal' && temporalCell ? (
+    <TemporalInspector
+      cell={temporalCell}
+      events={activity.stream?.events ?? []}
+      peak={temporalMatrix.peak}
+      onClose={() => setTemporalCell(null)}
+      onDrill={temporalDrill}
+    />
+  ) : selectedNode?.data.kind === 'project' ? (
     <ProjectInspector
       project={selectedNode.data.project}
       details={repositoryDetails}
+      sync={sync}
       loading={loading}
       busy={busyAction !== null}
       error={visibleError}
@@ -288,54 +474,102 @@ export default function WorkspacePage({
       onClose={() => setSelectedNodeId(null)}
       onViewDiff={() => void handleViewDiff(selectedCommit)}
       onCreateBranch={(name) => handleCreateBranch(selectedCommit.hash, name)}
+      revertPreview={revertFor(selectedCommit.hash)?.preview ?? null}
+      revertLoading={revertFor(selectedCommit.hash)?.loading ?? false}
+      revertFailure={revertFor(selectedCommit.hash)?.failure ?? null}
+      revertOutcome={revertFor(selectedCommit.hash)?.outcome ?? null}
+      onRequestRevertPreview={() => void handleRequestRevertPreview(selectedCommit)}
+      onCancelRevert={handleCancelRevert}
+      onConfirmRevert={() => void handleConfirmRevert(selectedCommit)}
     />
   ) : null
 
   return (
     <AppShell
-      project={project}
-      branch={repositoryDetails?.branch ?? null}
-      connected={gitGraph !== null}
-      onOpenAnotherProject={onOpenAnotherProject}
-    >
-      <div className="git-workspace">
-        <GitSidebar
-          project={project}
+      projectName={project.name}
+      projectPath={project.path}
+      activeModule="git"
+      systemReadout={(
+        <GitSystemReadout
           details={repositoryDetails}
-          graph={gitGraph}
-          selectedNodeId={selectedNodeId}
-          loading={loading}
-          onSelectNode={(nodeId) => {
-            setSelectedNodeId(nodeId)
-            closeContextMenu()
-            setActionError(null)
-          }}
-          onRefresh={() => void handleRefresh()}
-        />
-
-        <GitGraphViewport
-          key={layoutVersion}
-          projectName={project.name}
-          branchName={repositoryDetails?.branch ?? null}
-          initialNodes={positionedGraph.nodes}
-          edges={positionedGraph.edges}
-          selectedNodeId={selectedNodeId}
+          linked={gitGraph !== null}
           loading={loading}
           activity={busyAction}
-          error={!selectedNode ? visibleError : null}
-          onNodeClick={handleNodeClick}
-          onNodeContextMenu={handleNodeContextMenu}
-          onPaneClick={() => {
-            setSelectedNodeId(null)
-            closeContextMenu()
-          }}
-          onMoveStart={closeContextMenu}
         />
-
-        <GitInspectorPane project={project} details={repositoryDetails}>
-          {inspector}
-        </GitInspectorPane>
-      </div>
+      )}
+      onOpenAnotherProject={onOpenAnotherProject}
+    >
+      <SplitDeck
+        id="git-workspace"
+        className="git-workspace"
+        leftLabel="Redimensionar índice do repositório"
+        rightLabel="Redimensionar inspetor"
+        left={(
+          <GitSidebar
+            project={project}
+            details={repositoryDetails}
+            graph={gitGraph}
+            selectedNodeId={selectedNodeId}
+            loading={loading}
+            onSelectNode={(nodeId) => {
+              setSelectedNodeId(nodeId)
+              closeContextMenu()
+              setActionError(null)
+            }}
+            onRefresh={() => void handleRefresh()}
+          />
+        )}
+        center={surface === 'temporal' ? (
+          <TemporalSurface
+            matrix={temporalMatrix}
+            stream={activity.stream}
+            loading={activity.loading}
+            error={activity.error}
+            scale={temporalScale}
+            range={temporalRange}
+            selectedKey={temporalCell?.key ?? null}
+            onScale={(next) => {
+              setTemporalScale(next)
+              setTemporalCell(null)
+            }}
+            onRange={(next) => {
+              setTemporalRange(next)
+              setTemporalCell(null)
+            }}
+            onSelect={setTemporalCell}
+            surfaceSwitch={surfaceSwitch}
+          />
+        ) : (
+          <GitGraphViewport
+            key={layoutVersion}
+            projectName={project.name}
+            branchName={repositoryDetails?.branch ?? null}
+            initialNodes={positionedGraph.nodes}
+            edges={positionedGraph.edges}
+            selectedNodeId={selectedNodeId}
+            loading={loading}
+            activity={busyAction}
+            error={!selectedNode ? visibleError : null}
+            onNodeClick={handleNodeClick}
+            onNodeContextMenu={handleNodeContextMenu}
+            onPaneClick={() => {
+              setSelectedNodeId(null)
+              closeContextMenu()
+            }}
+            onMoveStart={closeContextMenu}
+            surfaceSwitch={surfaceSwitch}
+          />
+        )}
+        right={(
+          <GitInspectorPane
+            project={project}
+            details={repositoryDetails}
+            graph={gitGraph}
+          >
+            {inspector}
+          </GitInspectorPane>
+        )}
+      />
 
       {contextMenu && contextMenuItems.length > 0 && (
         <NodeContextMenu

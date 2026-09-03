@@ -1,14 +1,24 @@
 import { useState } from 'react'
 
+import { Button } from '../../../../design'
+import GithubPanel from '../../../../modules/github/GithubPanel'
+import RemotesPanel from '../../../../modules/git/components/RemotesPanel'
+import SyncPanel from '../../../../modules/git/components/SyncPanel'
+import type { UseGitSyncResult } from '../../../../modules/git/hooks/useGitSync'
 import type { ProjectOpenResult } from '../../../../modules/git/types/project'
-import type {
-  GitFileStatus,
-  GitRepositoryDetails,
-} from '../../../../modules/git/types/repository'
+import type { GitRepositoryDetails } from '../../../../modules/git/types/repository'
+import {
+  hasUnstagedChanges,
+  isStaged,
+  statusLabel,
+  summarizeWorkingTree,
+} from '../../../../modules/git/view/workingTree'
 
 interface ProjectInspectorProps {
   project: ProjectOpenResult
   details: GitRepositoryDetails | null
+  /** Estado das operações de rede, vindo do container do módulo. */
+  sync: UseGitSyncResult
   loading: boolean
   busy: boolean
   error: string | null
@@ -20,21 +30,10 @@ interface ProjectInspectorProps {
   onCommit: (message: string) => Promise<boolean>
 }
 
-function isStaged(file: GitFileStatus): boolean {
-  return ![' ', '?', '!'].includes(file.index_status)
-}
-
-function hasUnstagedChanges(file: GitFileStatus): boolean {
-  return ![' ', '!'].includes(file.worktree_status)
-}
-
-function statusLabel(file: GitFileStatus): string {
-  return `${file.index_status}${file.worktree_status}`.replaceAll(' ', '·')
-}
-
 export default function ProjectInspector({
   project,
   details,
+  sync,
   loading,
   busy,
   error,
@@ -47,8 +46,9 @@ export default function ProjectInspector({
 }: ProjectInspectorProps) {
   const [message, setMessage] = useState('')
   const files = details?.files ?? []
-  const unstagedCount = files.filter(hasUnstagedChanges).length
-  const stagedCount = files.filter(isStaged).length
+  const summary = summarizeWorkingTree(files)
+  const unstagedCount = summary.unstaged
+  const stagedCount = summary.staged
 
   async function handleCommit() {
     const committed = await onCommit(message)
@@ -79,21 +79,16 @@ export default function ProjectInspector({
             <h2>Working tree</h2>
 
             <div className="inspector-section__actions">
-              <button
-                type="button"
+              <Button
                 onClick={() => void onStageAll()}
                 disabled={loading || busy || unstagedCount === 0}
               >
                 Stage all ({unstagedCount})
-              </button>
+              </Button>
 
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={loading || busy}
-              >
-                {loading ? 'Carregando…' : 'Atualizar'}
-              </button>
+              <Button onClick={onRefresh} disabled={loading || busy} busy={loading}>
+                {loading ? 'Lendo…' : 'Atualizar'}
+              </Button>
             </div>
           </div>
 
@@ -110,22 +105,14 @@ export default function ProjectInspector({
                 </div>
                 <div className="file-status-list__actions">
                   {hasUnstagedChanges(file) && (
-                    <button
-                      type="button"
-                      onClick={() => void onStage(file.path)}
-                      disabled={busy}
-                    >
+                    <Button onClick={() => void onStage(file.path)} disabled={busy}>
                       Stage
-                    </button>
+                    </Button>
                   )}
                   {isStaged(file) && (
-                    <button
-                      type="button"
-                      onClick={() => void onUnstage(file.path)}
-                      disabled={busy}
-                    >
+                    <Button onClick={() => void onUnstage(file.path)} disabled={busy}>
                       Unstage
-                    </button>
+                    </Button>
                   )}
                 </div>
               </li>
@@ -142,16 +129,59 @@ export default function ProjectInspector({
               placeholder="Mensagem do commit"
               disabled={busy}
             />
-            <button
-              className="inspector-button--primary"
-              type="button"
+            <Button
+              size="md"
+              variant="primary"
+              block
               onClick={() => void handleCommit()}
               disabled={busy || message.trim().length === 0}
             >
               Commit staged files
-            </button>
+            </Button>
           </div>
         </section>
+
+        <SyncPanel
+          remotes={sync.remotes}
+          selectedRemote={sync.selectedRemote}
+          onSelectRemote={sync.selectRemote}
+          operation={sync.operation}
+          busy={sync.busy || busy}
+          failure={sync.failure}
+          pushPlan={sync.pushPlan}
+          pullPlan={sync.pullPlan}
+          fetchOutcome={sync.fetchOutcome}
+          pushSummary={sync.pushOutcome
+            ? `${sync.pushOutcome.pushed_commits} commit(s) enviados para ${sync.pushOutcome.remote}/${sync.pushOutcome.target_branch}`
+              + (sync.pushOutcome.created_remote_branch ? ' · branch remota criada' : '')
+              + (sync.pushOutcome.created_upstream ? ' · upstream configurado' : '')
+            : null}
+          pullSummary={sync.pullOutcome
+            ? `${sync.pullOutcome.applied_commits} commit(s) integrados por ${sync.pullOutcome.strategy}`
+              + (sync.pullOutcome.files_changed.length > 0
+                ? ` · ${sync.pullOutcome.files_changed.length} arquivo(s) alterados`
+                : '')
+            : null}
+          onFetch={() => void sync.runFetch()}
+          onPreparePull={() => void sync.preparePull()}
+          onPreparePush={() => void sync.preparePush()}
+          onConfirmPush={(setUpstream) => void sync.confirmPush(setUpstream)}
+          onConfirmPull={(strategy) => void sync.confirmPull(strategy)}
+          onDismiss={sync.dismiss}
+        />
+
+        <RemotesPanel
+          projectPath={project.path}
+          remotes={sync.remotes}
+          busy={sync.busy || busy}
+          onChanged={() => void sync.reloadRemotes()}
+        />
+
+        <GithubPanel
+          projectPath={project.path}
+          currentBranch={details?.branch ?? null}
+          busy={sync.busy || busy}
+        />
 
         {details && details.commits.length > 0 && (
           <section className="inspector-section">

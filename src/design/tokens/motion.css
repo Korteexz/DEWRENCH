@@ -1,0 +1,34 @@
+/* ==========================================================================
+   DEWRENCH — MOTION
+   --------------------------------------------------------------------------
+   Movimento é telemetria. Um elemento só se move quando um evento REAL passou
+   por ele: mudança de estado verificada, execução, seleção, carregamento,
+   criação ou destruição. Nada pulsa por estética.
+   ========================================================================== */
+
+:root {
+  --m-instant: 90ms;   /* resposta tátil: hover, press */
+  --m-signal: 160ms;   /* mudança de estado visível */
+  --m-transit: 260ms;  /* entrada/saída de compartimento */
+
+  /*
+   * Acendimento de um ponto no campo. Sobe mais rápido do que apaga: o olho
+   * lê a subida como resposta ao ponteiro e o decaimento como inércia do
+   * instrumento — simétrico pareceria uma animação, não uma reação.
+   */
+  --m-glow-rise: 240ms;
+  --m-glow-fall: 420ms;
+
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.6, 0, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --m-instant: 0ms;
+    --m-signal: 0ms;
+    --m-transit: 0ms;
+    --m-glow-rise: 0ms;
+    --m-glow-fall: 0ms;
+  }
+}

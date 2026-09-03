@@ -1,0 +1,222 @@
+/* ==========================================================================
+   DEWRENCH — MATRIZ TEMPORAL
+   --------------------------------------------------------------------------
+   Instrumento de análise temporal, não calendário de contribuição. A leitura
+   é uma FITA com escala: células em linha, marcações de eixo embaixo, degraus
+   discretos de intensidade.
+
+   A intensidade usa a rampa de tinta (branco), não uma cor: a cor continua
+   reservada para significado — merge e revert entram como marcas, não como
+   preenchimento.
+   ========================================================================== */
+
+.temporal-field {
+  display: grid;
+  align-content: center;   /* a fita fica no eixo do compartimento, não colada no topo */
+  gap: var(--s5);
+  padding: var(--s5);
+  overflow: auto;
+}
+
+.temporal-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.temporal-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+}
+
+.temporal-breadcrumb button {
+  padding: 2px var(--s1);
+  border: 0;
+  background: transparent;
+  color: var(--ink-low);
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+
+.temporal-breadcrumb button[data-active='true'] { color: var(--ink-hi); }
+.temporal-breadcrumb button:hover { color: var(--ink-hi); }
+
+.temporal-matrix { display: grid; gap: var(--s3); }
+
+/*
+ * As células ocupam a largura disponível dentro de limites: 12 meses viram uma
+ * fita larga, 31 dias uma fita fina, e a leitura continua sendo a mesma coisa.
+ */
+.temporal-matrix__cells {
+  display: grid;
+  gap: 3px;
+}
+
+/* A célula é um quadrado com rótulo de eixo por baixo; o rótulo ocupa espaço
+   sempre, para que a linha de base não dance entre escalas. */
+.temporal-cell {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  justify-items: center;
+  gap: var(--s1);
+}
+
+.temporal-cell__fill {
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--line-hair);
+  background: transparent;
+  transition:
+    background var(--m-signal) var(--ease-out),
+    border-color var(--m-signal) var(--ease-out);
+}
+
+.temporal-cell[data-level='1'] .temporal-cell__fill { background: rgba(153, 161, 164, 0.22); }
+.temporal-cell[data-level='2'] .temporal-cell__fill { background: rgba(153, 161, 164, 0.42); }
+.temporal-cell[data-level='3'] .temporal-cell__fill { background: rgba(198, 205, 207, 0.66); }
+.temporal-cell[data-level='4'] .temporal-cell__fill { background: var(--ink-hi); }
+
+.temporal-cell:hover .temporal-cell__fill { border-color: var(--line-strong); }
+
+/* Seleção é moldura do instrumento, não mudança de cor do dado. */
+.temporal-cell[data-selected='true'] .temporal-cell__fill {
+  border-color: var(--instrument-current);
+  box-shadow: 0 0 0 1px var(--instrument-current);
+}
+
+.temporal-cell[data-empty='true'] .temporal-cell__fill {
+  border-style: dashed;
+  border-color: var(--line-hair);
+}
+
+/* Marcas de tipo: um traço no topo da célula. Elas dizem O QUE aconteceu,
+   enquanto o preenchimento diz QUANTO. */
+.temporal-cell__mark {
+  position: absolute;
+  top: -2px;
+  width: 8px;
+  height: 2px;
+}
+
+.temporal-cell__mark[data-kind='merge'] { left: 2px; background: var(--signal-info); }
+.temporal-cell__mark[data-kind='revert'] { right: 2px; background: var(--signal-warn); }
+
+.temporal-cell__axis {
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-mid);
+  opacity: 0;
+}
+
+.temporal-cell__axis[data-visible='true'] { opacity: 1; }
+.temporal-cell[data-selected='true'] .temporal-cell__axis { color: var(--instrument-current); opacity: 1; }
+
+.temporal-matrix__legend {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding-top: var(--s2);
+  border-top: 1px solid var(--line-hair);
+}
+
+.temporal-scale { display: flex; gap: 2px; }
+
+.temporal-scale i {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--line-hair);
+}
+
+.temporal-scale i[data-level='1'] { background: rgba(153, 161, 164, 0.22); }
+.temporal-scale i[data-level='2'] { background: rgba(153, 161, 164, 0.42); }
+.temporal-scale i[data-level='3'] { background: rgba(198, 205, 207, 0.66); }
+.temporal-scale i[data-level='4'] { background: var(--ink-hi); }
+
+.temporal-empty {
+  margin: 0;
+  color: var(--ink-low);
+  font-size: var(--t-body);
+  line-height: var(--leading-body);
+}
+
+/* -- Detalhe do período no inspetor --------------------------------------- */
+.temporal-actor-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.temporal-actor-list li {
+  padding: 1px var(--s2);
+  border: 1px solid var(--line-hair);
+  color: var(--ink-mid);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+}
+
+.temporal-event-list { display: grid; gap: var(--s1); margin: 0; padding: 0; list-style: none; }
+
+.temporal-event-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.temporal-event-list code { color: var(--ink-low); font-family: var(--font-mono); font-size: var(--t-micro); }
+.temporal-event-list li[data-kind='merge'] code { color: var(--signal-info); }
+.temporal-event-list li[data-kind='revert'] code { color: var(--signal-warn); }
+.temporal-event-list span { overflow: hidden; color: var(--ink-mid); font-size: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
+.temporal-event-list em { color: var(--ink-faint); font-family: var(--font-mono); font-size: var(--t-micro); font-style: normal; }
+
+.temporal-drill {
+  width: 100%;
+  min-height: 30px;
+  margin-top: var(--s4);
+  border: 1px solid var(--instrument-current);
+  background: transparent;
+  color: var(--instrument-current);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  transition: background var(--m-instant) var(--ease-out);
+}
+
+.temporal-drill:hover { background: var(--wash-instrument); }
+
+/* Legenda própria da matriz: as marcas aqui são traços, não os símbolos do
+   grafo — cada instrumento explica a si mesmo com a sua própria gramática. */
+.temporal-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+}
+
+.temporal-legend span { display: flex; align-items: center; gap: var(--s1); }
+.temporal-legend i { display: block; width: 10px; height: 2px; }
+.temporal-legend i[data-kind='volume'] { height: 8px; background: var(--ink-mid); }
+.temporal-legend i[data-kind='merge'] { background: var(--signal-info); }
+.temporal-legend i[data-kind='revert'] { background: var(--signal-warn); }

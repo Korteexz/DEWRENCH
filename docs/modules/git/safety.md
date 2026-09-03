@@ -70,4 +70,22 @@ Arquivos: ...
 
 ## Revert
 
-`git revert` deve ser apresentado como criação de um novo commit inverso. O histórico anterior é preservado; conflitos ainda podem ocorrer.
+> Estado: `[IMPLEMENTED]` para commits comuns e root commits.
+
+`git revert` é apresentado como criação de um novo commit inverso. O histórico anterior é preservado e o commit original não é removido nem reescrito.
+
+### Preflight
+
+O backend valida, no preview e novamente antes da mutação: repositório válido, hash existente, objeto do tipo commit, ausência de operação intermediária (merge, revert, cherry-pick, rebase, bisect), ausência de conflitos ativos, ausência de mudanças staged, commit não-merge, identidade Git configurada e ausência de sobreposição entre alterações locais e arquivos do commit.
+
+A confirmação descreve consequências: o que será criado, o que será preservado, quais arquivos são afetados e quais alterações locais permanecerão intocadas.
+
+### Merge commits
+
+`[LIMITAÇÃO CONHECIDA]` Reverter um merge exige escolher explicitamente a mainline, e essa escolha muda qual lado da história é desfeito. O DEWRENCH bloqueia com `MERGE_COMMIT_UNSUPPORTED` e explica o motivo. `-m 1` nunca é assumido, e nenhuma confirmação executável é exibida para um merge commit.
+
+### Conflito
+
+`[POLÍTICA]` O MVP não possui interface de resolução e continuação, portanto não deixa o repositório parado em `REVERT_HEAD`. Ao detectar conflito, o backend coleta os arquivos conflitantes, executa `git revert --abort` e só declara restauração após comprovar três condições: `REVERT_HEAD` ausente, HEAD idêntico ao anterior e status idêntico ao anterior. Comprovado, retorna `REVERT_CONFLICT_ABORTED`. Não comprovado, retorna `REVERT_CONFLICT_ABORT_FAILED`, marcado como não recuperável.
+
+`reset --hard` nunca é usado como recuperação. Operações intermediárias que já existiam antes da ação do usuário nunca são canceladas automaticamente.

@@ -1,0 +1,62 @@
+/* ==========================================================================
+   DEWRENCH — COLOR
+   --------------------------------------------------------------------------
+   Modelo: o DEWRENCH é um instrumento, não um dashboard. A leitura acontece
+   por CONTRASTE e por TRAÇO; a cor é reservada para significado.
+
+   Quatro superfícies, três pesos de linha, quatro pesos de tinta e apenas
+   cinco sinais semânticos. Se uma cor nova for necessária, ela precisa de um
+   significado novo — caso contrário ela é ruído.
+   ========================================================================== */
+
+:root {
+  /* -- Superfícies: do vazio observado até o elemento manipulável ---------- */
+  --surface-void: #08090a;      /* fundo da aplicação e campo do grafo */
+  --surface-panel: #0d0f10;     /* compartimento do instrumento */
+  --surface-raised: #131618;    /* cabeçalho de painel, linha ativa */
+  --surface-input: #0f1213;     /* campo editável */
+  --surface-hover: #191d1f;     /* estado transitório de ponteiro */
+
+  /* -- Linhas: hierarquia por peso, nunca por cor ------------------------- */
+  --line-hair: #191d1e;         /* separador interno, quase subliminar */
+  --line-edge: #262b2d;         /* borda de compartimento */
+  --line-strong: #394043;       /* borda de elemento em foco */
+
+  /* -- Tinta -------------------------------------------------------------- */
+  --ink-hi: #e6e9ea;            /* dado primário */
+  --ink-mid: #99a1a4;           /* dado secundário */
+  --ink-low: #6a7275;           /* rótulo técnico */
+  --ink-faint: #454c4f;         /* marcação de grade, índice, ruído útil */
+
+  /* -- Sinais semânticos: cinco, e nenhum deles decora --------------------- */
+  --signal-active: #e6e9ea;     /* seleção/foco = contraste, não cor */
+  --signal-nominal: #5fbf8b;    /* estado saudável VERIFICADO pelo backend */
+  --signal-warn: #d6a441;       /* consequência reversível a explicar */
+  --signal-fault: #e0574d;      /* falha real reportada pela ferramenta */
+  --signal-info: #6fa3c4;       /* leitura em andamento / metadado */
+
+  /* -- Identidade do instrumento montado ---------------------------------- */
+  --instrument-git: #d8813f;
+  --instrument-docker: #5f9fd6;
+  --instrument-db: #c9b25f;
+  --instrument-rrf: #5cb8a3;
+  /* Reatribuído pelo shell quando outro módulo assumir a viewport. */
+  --instrument-current: var(--instrument-git);
+
+  /* -- Leitura de diff ----------------------------------------------------
+     Verde e vermelho aqui significam "linha adicionada/removida", não
+     "saudável/falho". Tokens próprios impedem que os dois sentidos se
+     confundam quando alguém for mexer na paleta depois. */
+  --diff-add: #63c48d;
+  --diff-del: #e0655c;
+  --diff-add-wash: rgba(99, 196, 141, 0.09);
+  --diff-del-wash: rgba(224, 101, 92, 0.09);
+  --diff-gutter: #101314;
+
+  /* -- Tintas translúcidas: derivadas, para não multiplicar hex ----------- */
+  --wash-active: rgba(230, 233, 234, 0.07);
+  --wash-instrument: rgba(216, 129, 63, 0.1);
+  --wash-nominal: rgba(95, 191, 139, 0.09);
+  --wash-warn: rgba(214, 164, 65, 0.09);
+  --wash-fault: rgba(224, 87, 77, 0.09);
+}

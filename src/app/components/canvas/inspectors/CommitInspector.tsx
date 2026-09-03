@@ -1,6 +1,14 @@
 import { useState } from 'react'
 
+import { Button } from '../../../../design'
+import DiffView from '../../../../modules/git/components/DiffView'
+import RevertPanel from '../../../../modules/git/components/RevertPanel'
 import type { GitGraphCommit } from '../../../../modules/git/types/repository'
+import type {
+  GitFailure,
+  GitRevertOutcome,
+  GitRevertPreview,
+} from '../../../../modules/git/types/revert'
 
 interface CommitInspectorProps {
   commit: GitGraphCommit
@@ -11,6 +19,13 @@ interface CommitInspectorProps {
   onClose: () => void
   onViewDiff: () => void
   onCreateBranch: (name: string) => Promise<boolean>
+  revertPreview: GitRevertPreview | null
+  revertLoading: boolean
+  revertFailure: GitFailure | null
+  revertOutcome: GitRevertOutcome | null
+  onRequestRevertPreview: () => void
+  onCancelRevert: () => void
+  onConfirmRevert: () => void
 }
 
 export default function CommitInspector({
@@ -22,6 +37,13 @@ export default function CommitInspector({
   onClose,
   onViewDiff,
   onCreateBranch,
+  revertPreview,
+  revertLoading,
+  revertFailure,
+  revertOutcome,
+  onRequestRevertPreview,
+  onCancelRevert,
+  onConfirmRevert,
 }: CommitInspectorProps) {
   const [branchName, setBranchName] = useState('')
 
@@ -55,14 +77,24 @@ export default function CommitInspector({
         <section className="inspector-section">
           <div className="inspector-section__heading">
             <h2>Diff</h2>
-            <button type="button" onClick={onViewDiff} disabled={diffLoading}>
-              {diffLoading ? 'Carregando…' : 'View diff'}
-            </button>
+            <Button onClick={onViewDiff} disabled={diffLoading} busy={diffLoading}>
+              {diffLoading ? 'Lendo…' : 'Ver diff'}
+            </Button>
           </div>
-          {diff !== null && (
-            <pre className="commit-diff">{diff || 'Nenhuma alteração retornada.'}</pre>
-          )}
+          {diff !== null && <DiffView source={diff} />}
         </section>
+
+        <RevertPanel
+          commit={commit}
+          preview={revertPreview}
+          loading={revertLoading}
+          busy={busy}
+          failure={revertFailure}
+          outcome={revertOutcome}
+          onRequestPreview={onRequestRevertPreview}
+          onCancel={onCancelRevert}
+          onConfirm={onConfirmRevert}
+        />
 
         <section className="inspector-section">
           <h2>Nova branch a partir deste commit</h2>
@@ -73,14 +105,15 @@ export default function CommitInspector({
               placeholder="nome-da-branch"
               disabled={busy}
             />
-            <button
-              className="inspector-button--primary"
-              type="button"
+            <Button
+              size="md"
+              variant="primary"
+              block
               onClick={() => void handleCreateBranch()}
               disabled={busy || branchName.trim().length === 0}
             >
               Criar em {commit.short_hash}
-            </button>
+            </Button>
           </div>
         </section>
 

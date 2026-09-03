@@ -26,7 +26,8 @@ O módulo Git é o primeiro vertical slice real do DEWRENCH. Ele usa o Git insta
 | Merge | `[STUB]` | Arquivo vazio e não exportado. |
 | Histórico avançado | `[STUB]` | Arquivo vazio. |
 | Remote/fetch/pull/push | `[STUB/PLANNED]` | Sem contrato ativo. |
-| Revert/undo | `[PLANNED]` | Sem implementação. |
+| Revert de commit | `[IMPLEMENTED]` | `git revert --no-edit` com preview, preflight e abort automático em conflito. Merge commits bloqueados. |
+| Undo geral/recovery center | `[PLANNED]` | Sem implementação. |
 | GitHub/PR | `[STUB/PLANNED]` | Módulo GitHub vazio. |
 
 ## Objetivo educacional

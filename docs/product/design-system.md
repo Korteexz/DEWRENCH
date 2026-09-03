@@ -1,89 +1,115 @@
 # Design system
 
-> Estado: `[EXPERIMENTAL/PARTIAL]` — tokens e linguagem existem; ainda não há biblioteca formal de componentes.
+> Estado: `[PARTIAL]` — tokens e primitivas implementados em `src/design/`;
+> migração das telas em andamento (fatia 1 de 2 concluída).
 
 ## Direção visual
 
-Interface escura, técnica, densa e fluida, inspirada em CRT/instrumentação. Glow e movimento comunicam foco e atividade. CRT é uma camada estética, não licença para reduzir legibilidade.
+DEWRENCH é um **instrumento usado para observar e manipular software** — não um
+dashboard SaaS futurista. A referência é instrumentação técnica: telemetria,
+mission control, computer vision, sistemas industriais e científicos.
 
-## Tokens atuais
+> "A machine for seeing machines."
 
-### Base
+A direção anterior (CRT/retro terminal, glow verde, scanlines como assinatura)
+foi **abandonada**. O que resta dela em `src/App.css` é legado a remover.
 
-| Token | Valor |
+### Princípios
+
+1. Leitura por **contraste e traço**; cor é reservada para significado.
+2. Densidade se obtém por **hierarquia e escala**, nunca reduzindo a fonte —
+   10px é o piso absoluto do sistema.
+3. Toda visualização representa **dado real do estado do sistema**. Número
+   fictício, gráfico decorativo e animação sem evento não entram.
+4. Movimento é telemetria: algo se move porque um evento **verificado** passou
+   por ali.
+5. Cantos retos. Um instrumento é usinado, não arredondado.
+6. Seleção é comunicada por contraste e posição (barra lateral), não por cor —
+   assim a cor continua livre para semântica e a leitura sobrevive a daltonismo.
+
+### Evitar
+
+Neon cyberpunk, glassmorphism, gradientes SaaS, cards grandes arredondados,
+glow/glitch em excesso, simulação CRT pesada, hexágonos aleatórios e qualquer
+decoração futurista sem função.
+
+## Arquitetura
+
+```text
+src/design/                  não conhece Git, Tauri nem React Flow
+├── tokens/                  color, type, space, motion, grid
+└── primitives/              Panel, SectionHeader, TechnicalLabel, Metric,
+                             StatusIndicator, TelemetryBar, DataRow, Divider,
+                             CoordinateLabel, InstrumentFrame, Button
+src/app/shell/               chassi: AppShell, SystemBar, ModuleRail
+src/modules/<módulo>/        view-models, componentes e folha do módulo
+```
+
+**Regra de dependência**: `design/` não importa de `app/` nem de `modules/`.
+Os módulos importam de `design/` — nunca o contrário. É isso que permite
+acrescentar Docker, Kubernetes ou Terraform sem reescrever o shell.
+
+## Tokens
+
+Definidos em `src/design/tokens/`. Nenhum valor literal de cor, tamanho de
+fonte, espaçamento ou duração deve existir fora desses arquivos.
+
+### Superfícies e linhas
+
+| Token | Papel |
 |---|---|
-| background | `#070908` |
-| canvas | `#090c0a` |
-| panel | `#0d110f` |
-| text primary | `#dce5dc` |
-| text secondary | `#9da99f` |
-| text muted | `#606d63` |
-| success | `#55df9b` |
-| warning | `#e8c969` |
-| danger | `#ff746b` |
-| Git | `#f08a3c` |
-| Docker | `#65a9df` |
-| DB | `#d5bf68` |
-| RRF | `#64cbb2` |
+| `--surface-void` | fundo da aplicação e campo do grafo |
+| `--surface-panel` | compartimento |
+| `--surface-raised` | cabeçalho de painel, linha ativa |
+| `--surface-input` | campo editável |
+| `--surface-hover` | estado transitório de ponteiro |
+| `--line-hair` / `--line-edge` / `--line-strong` | hierarquia de traço |
+| `--ink-hi` / `--ink-mid` / `--ink-low` / `--ink-faint` | pesos de tinta |
+
+### Sinais semânticos
+
+Cinco, e nenhum deles decora:
+`--signal-active` (seleção/foco), `--signal-nominal` (estado saudável
+verificado), `--signal-warn` (consequência reversível), `--signal-fault`
+(falha real reportada pela ferramenta), `--signal-info` (leitura/metadado).
+
+### Instrumento
+
+`--instrument-git|docker|db|rrf` e `--instrument-current`, resolvido pelo
+chassi via `data-module`. Trocar de módulo troca o acento da interface inteira
+sem passar cor por props.
 
 ### Tipografia
 
-- UI: Inter, Segoe UI Variable/Segoe UI, Arial.
-- Técnica: Cascadia Code, SFMono-Regular, Consolas.
+Monospace é identidade (`--font-mono`), sans para texto corrente
+(`--font-sans`). Escala fechada: `--t-micro` 10 · `--t-label` 11 ·
+`--t-body` 12 · `--t-data` 13 · `--t-head` 15 · `--t-display` 19.
 
-O código atual não usa Roboto como fonte principal.
+### Geometria e movimento
 
-### Geometria
+Unidade 4px (`--s1`…`--s8`); chassi 52px; painéis 268px/324px; junta de 1px
+entre compartimentos. Movimento: `--m-instant` 90ms, `--m-signal` 160ms,
+`--m-transit` 260ms, zerados sob `prefers-reduced-motion`.
 
-- barra superior: 72px;
-- painel esquerdo: 252px;
-- painel direito: 306px;
-- grid: 28px;
-- raios pequenos/medianos: 3px/8px.
+## Regras de uso
 
-### Motion
+1. Tela nova não inventa moldura: usa `Panel`.
+2. Todo dado exibido declara de onde vem. `TelemetryBar` recebe valor **e**
+   total justamente para impedir percentual fabricado.
+3. Refs Git (branch, tag, hash) preservam caixa — `Main` e `main` são refs
+   diferentes; uppercase decorativo ali seria informação incorreta.
+4. `StatusIndicator` só pulsa (`live`) enquanto existe operação real em curso.
+5. Acessibilidade tem prioridade sobre estética: contraste, foco visível,
+   labels, teclado e reduced motion.
 
-- fast: 120ms;
-- standard: 240ms;
-- spring: 420ms com easing customizado.
+## Migração
 
-## Topologia da tela
-
-- topo: identidade, módulos e repo atual;
-- esquerda: índice de repository/branches/commits;
-- centro: superfície de topologia;
-- direita: inspetor contextual;
-- diff atual: dentro do inspetor de commit.
-
-O conceito anterior de diff viewer inferior continua uma direção possível, mas não corresponde ao código atual.
-
-## Objetos semânticos
-
-- projeto: orb;
-- commit: ring/core;
-- branch: diamond;
-- merge: variação de commit e edge;
-- seleção: glow + foco contextual;
-- indisponível: `SOON` com feedback de toque.
-
-## Efeitos
-
-- scanlines e vignette CRT;
-- grid computacional;
-- grid deformável em canvas;
-- física de nós;
-- foco de vizinhança;
-- LEDs/retículas/instrument labels.
-
-## Acessibilidade
-
-`prefers-reduced-motion` reduz animações e remove scanlines. Preservar e testar esse comportamento. Não depender apenas de cor; labels e formas carregam semântica.
-
-## Regras para Claude Design/implementação
-
-1. Estudar tokens e componentes antes de redesenhar.
-2. Prototipar fora do frontend real quando a mudança for exploratória.
-3. Implementar por componente, preservando contratos.
-4. Evitar posicionamento absoluto em massa para layout estrutural.
-5. Não trocar semântica por decoração.
-6. Validar 800×600 e breakpoints existentes.
+| Área | Estado |
+|---|---|
+| Tokens e primitivas | `[IMPLEMENTED]` |
+| Chassi / barra de sistema / trilho de módulos | `[IMPLEMENTED]` |
+| Deck do Git: índice, moldura do campo, inspetor | `[IMPLEMENTED]` |
+| Inspetores de objeto (project/branch/commit) | `[PARTIAL]` — pele migrada, estrutura ainda legada |
+| Nós, edges e foco do grafo | `[PLANNED]` — fatia 2 |
+| Home, setup e repositório sem commit | `[PLANNED]` — fatia 2 |
+| Textura CRT (`CrtOverlay`) | `[PLANNED]` remover — fatia 2 |

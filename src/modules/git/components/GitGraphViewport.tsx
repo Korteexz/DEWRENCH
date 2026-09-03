@@ -1,7 +1,16 @@
-import type { NodeMouseHandler } from '@xyflow/react'
+import { useCallback, useRef, type ReactNode } from 'react'
+import type { NodeMouseHandler, Viewport } from '@xyflow/react'
 
 import WorkspaceCanvas from '../../../app/components/canvas/WorkspaceCanvas'
 import type { WorkspaceFlowEdge, WorkspaceFlowNode } from '../../../app/graph/types'
+import {
+  InstrumentFrame,
+  StatusIndicator,
+  TechnicalLabel,
+} from '../../../design'
+import GraphViewportReadout, {
+  type GraphViewportReadoutHandle,
+} from './GraphViewportReadout'
 
 interface GitGraphViewportProps {
   projectName: string
@@ -16,8 +25,17 @@ interface GitGraphViewportProps {
   onNodeContextMenu: NodeMouseHandler<WorkspaceFlowNode>
   onPaneClick: () => void
   onMoveStart: () => void
+  /** Seletor de instrumento do compartimento central. */
+  surfaceSwitch?: ReactNode
 }
 
+/**
+ * Campo observado do módulo Git.
+ *
+ * Este componente é a fronteira do XYFlow: nenhuma outra parte da aplicação
+ * conhece a biblioteca de grafo. Trocá-la deve significar reescrever apenas
+ * `WorkspaceCanvas` e este arquivo, sem tocar na instrumentação em volta.
+ */
 export default function GitGraphViewport({
   projectName,
   branchName,
@@ -31,41 +49,70 @@ export default function GitGraphViewport({
   onNodeContextMenu,
   onPaneClick,
   onMoveStart,
+  surfaceSwitch,
 }: GitGraphViewportProps) {
+  const readoutRef = useRef<GraphViewportReadoutHandle>(null)
+
+  const handleViewportChange = useCallback((viewport: Viewport) => {
+    readoutRef.current?.update(viewport)
+  }, [])
+
   return (
-    <section className="git-graph-viewport" aria-label={`Grafo Git de ${projectName}`}>
-      <div className="graph-instrument graph-instrument--top">
-        <span>02 / TOPOLOGY SURFACE</span>
-        <strong>{branchName ?? 'DETACHED'}</strong>
-        <code>{initialNodes.length.toString().padStart(3, '0')} NODES</code>
+    <section
+      className="git-graph-viewport"
+      aria-label={`Topologia Git de ${projectName}`}
+    >
+      <header className="git-graph-viewport__bar">
+        <span className="dw-panel__index">02</span>
+        <TechnicalLabel tone="mid">Topology surface</TechnicalLabel>
+        {surfaceSwitch}
+        <span className="git-graph-viewport__bar-rule" aria-hidden="true" />
+        <span className="git-graph-viewport__ref">
+          {branchName ?? 'DETACHED HEAD'}
+        </span>
+        <span className="dw-coord">
+          <span><b>N</b>{initialNodes.length.toString().padStart(3, '0')}</span>
+          <span><b>E</b>{edges.length.toString().padStart(3, '0')}</span>
+        </span>
+      </header>
+
+      <div className="git-graph-viewport__field">
+        <WorkspaceCanvas
+          initialNodes={initialNodes}
+          edges={edges}
+          selectedNodeId={selectedNodeId}
+          onNodeClick={onNodeClick}
+          onNodeContextMenu={onNodeContextMenu}
+          onPaneClick={onPaneClick}
+          onMoveStart={onMoveStart}
+          onViewportChange={handleViewportChange}
+        />
+        <InstrumentFrame />
       </div>
 
-      <WorkspaceCanvas
-        initialNodes={initialNodes}
-        edges={edges}
-        selectedNodeId={selectedNodeId}
-        onNodeClick={onNodeClick}
-        onNodeContextMenu={onNodeContextMenu}
-        onPaneClick={onPaneClick}
-        onMoveStart={onMoveStart}
-      />
+      <footer className="git-graph-viewport__foot">
+        <span className="git-graph-viewport__legend" aria-hidden="true">
+          <span><i data-mark="project" />PROJECT</span>
+          <span><i data-mark="commit" />COMMIT</span>
+          <span><i data-mark="merge" />MERGE</span>
+          <span><i data-mark="branch" />BRANCH</span>
+        </span>
 
-      <div className="graph-axis graph-axis--x" aria-hidden="true" />
-      <div className="graph-axis graph-axis--y" aria-hidden="true" />
+        <GraphViewportReadout ref={readoutRef} />
 
-      <div className="graph-legend" aria-hidden="true">
-        <span><i className="graph-legend__project" />PROJECT</span>
-        <span><i className="graph-legend__commit" />COMMIT</span>
-        <span><i className="graph-legend__branch" />BRANCH</span>
-      </div>
+        <StatusIndicator
+          tone={activity ? 'info' : loading ? 'info' : 'nominal'}
+          label={activity ?? (loading ? 'READING REPOSITORY' : 'IDLE')}
+          live={Boolean(activity) || loading}
+        />
+      </footer>
 
-      {(loading || activity) && (
-        <div className="graph-activity" role="status">
-          <span />{activity ?? 'READING REPOSITORY'}
-        </div>
+      {error && (
+        <p className="git-graph-viewport__error" role="status">
+          <TechnicalLabel tone="fault" size="micro">FAULT</TechnicalLabel>
+          {error}
+        </p>
       )}
-
-      {error && <p className="graph-error">ERR / {error}</p>}
     </section>
   )
 }

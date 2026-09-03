@@ -1,6 +1,16 @@
+import {
+  Button,
+  DataRow,
+  Panel,
+  SectionHeader,
+  StatusIndicator,
+  TelemetryBar,
+} from '../../../design'
 import { branchNodeId, commitNodeId, PROJECT_NODE_ID } from '../../../app/graph/types'
 import type { ProjectOpenResult } from '../types/project'
-import type { GitGraph, GitRepositoryDetails } from '../types/repository'
+import type { GitBranch, GitGraph, GitRepositoryDetails } from '../types/repository'
+import { summarizeGraph } from '../view/graphStats'
+import { summarizeWorkingTree } from '../view/workingTree'
 
 interface GitSidebarProps {
   project: ProjectOpenResult
@@ -12,7 +22,50 @@ interface GitSidebarProps {
   onRefresh: () => void
 }
 
-/** Compact repository navigation mirrors Git hierarchy without duplicating data fetching. */
+/** Quantidade de commits listados no índice; o grafo continua mostrando todos. */
+const COMMIT_INDEX_LIMIT = 24
+
+/**
+ * Leitura de rastreamento de uma branch local.
+ *
+ * Setas com número em vez de rótulo por extenso: o índice é uma coluna
+ * estreita, e ↑/↓ com contagem é a convenção que qualquer usuário de Git já lê
+ * sem legenda.
+ */
+function TrackingReadout({ branch }: { branch: GitBranch }) {
+  if (branch.gone) {
+    return <span className="git-tracking" data-tone="warn">upstream ausente</span>
+  }
+
+  if (!branch.upstream) {
+    return <span className="git-tracking" data-tone="idle">local</span>
+  }
+
+  if (branch.ahead === 0 && branch.behind === 0) {
+    return <span className="git-tracking" data-tone="ok">sync</span>
+  }
+
+  return (
+    <span className="git-tracking" data-tone={branch.ahead > 0 && branch.behind > 0 ? 'warn' : 'active'}>
+      {branch.ahead > 0 && <b>↑{branch.ahead}</b>}
+      {branch.behind > 0 && <i>↓{branch.behind}</i>}
+    </span>
+  )
+}
+
+function describeBranch(branch: GitBranch): string {
+  const tracking = branch.upstream
+    ? `rastreando ${branch.upstream}${branch.gone ? ' (ausente)' : ''}`
+    : 'sem upstream'
+  return `${branch.name} → ${branch.head} · ${tracking}`
+}
+
+/**
+ * Índice do repositório.
+ *
+ * Não busca dados: recebe o mesmo snapshot que o grafo usa, o que garante que
+ * lista e topologia nunca discordem sobre o estado do repositório.
+ */
 export default function GitSidebar({
   project,
   details,
@@ -22,93 +75,136 @@ export default function GitSidebar({
   onSelectNode,
   onRefresh,
 }: GitSidebarProps) {
-  const currentBranch = graph?.branches.find((branch) => branch.current)
+  const stats = summarizeGraph(graph)
+  const tree = summarizeWorkingTree(details?.files)
   const branches = graph?.branches ?? []
+  const remoteBranches = graph?.remote_branches ?? []
   const commits = graph?.commits ?? []
-  const dirtyCount = details?.files.length ?? 0
 
   return (
-    <aside className="git-sidebar" aria-label="Histórico Git">
-      <div className="panel-terminal-label">
-        <span>01</span>
-        <strong>REPOSITORY INDEX</strong>
-        <button type="button" onClick={onRefresh} disabled={loading}>
-          {loading ? 'SYNCING' : 'SYNC'}
-        </button>
+    <Panel
+      as="aside"
+      index="01"
+      title="Repository index"
+      aria-label="Índice do repositório"
+      flush
+      scroll
+      className="git-sidebar"
+      actions={(
+        <Button onClick={onRefresh} disabled={loading} busy={loading}>
+          {loading ? 'SYNC…' : 'SYNC'}
+        </Button>
+      )}
+      footer={(
+        <>
+          <StatusIndicator
+            tone={graph ? 'nominal' : 'idle'}
+            label={graph ? 'GIT CLI' : 'NO DATA'}
+            live={loading}
+          />
+          <StatusIndicator tone="idle" label="LOCAL" filled={false} />
+        </>
+      )}
+    >
+      <div className="git-sidebar__subject">
+        <DataRow
+          primary={project.name}
+          secondary={stats.currentBranch ?? details?.branch ?? 'resolvendo branch'}
+          lead={<span className="git-sidebar__subject-mark" />}
+          trail={tree.clean ? 'CLEAN' : `${tree.total}Δ`}
+          selected={selectedNodeId === PROJECT_NODE_ID}
+          onSelect={() => onSelectNode(PROJECT_NODE_ID)}
+          title={project.path}
+        />
+
+        <div className="git-sidebar__telemetry">
+          <TelemetryBar
+            label="Staged"
+            value={tree.staged}
+            total={Math.max(tree.total, 1)}
+            segments={18}
+            tone={tree.staged > 0 ? 'instrument' : 'neutral'}
+            readout={`${tree.staged}/${tree.total}`}
+          />
+        </div>
       </div>
 
-      <button
-        className={`repository-readout${selectedNodeId === PROJECT_NODE_ID ? ' is-selected' : ''}`}
-        type="button"
-        onClick={() => onSelectNode(PROJECT_NODE_ID)}
-      >
-        <span className="repository-readout__status" aria-hidden="true" />
-        <span>
-          <strong>{project.name}</strong>
-          <small>{currentBranch?.name ?? details?.branch ?? 'resolving branch'}</small>
-        </span>
-        <code>{dirtyCount.toString().padStart(2, '0')} Δ</code>
-      </button>
-
-      <section className="git-tree-section">
-        <header>
-          <span>BRANCHES</span>
-          <code>{branches.length.toString().padStart(2, '0')}</code>
-        </header>
-        <ul className="git-tree-list git-tree-list--branches">
+      <section className="git-sidebar__section">
+        <SectionHeader
+          title="Branches"
+          readout={branches.length.toString().padStart(2, '0')}
+        />
+        <div className="git-sidebar__list">
           {branches.map((branch) => {
             const nodeId = branchNodeId(branch.name)
             return (
-              <li key={branch.name}>
-                <button
-                  className={selectedNodeId === nodeId ? 'is-selected' : ''}
-                  type="button"
-                  onClick={() => onSelectNode(nodeId)}
-                >
-                  <span className="git-tree-list__fork" aria-hidden="true" />
-                  <span title={branch.name}>{branch.name}</span>
-                  {branch.current && <small>HEAD</small>}
-                </button>
-              </li>
+              <DataRow
+                key={branch.name}
+                primary={branch.name}
+                secondary={branch.upstream ?? undefined}
+                lead={<span className="git-sidebar__branch-mark" />}
+                tag={branch.current ? 'HEAD' : undefined}
+                trail={<TrackingReadout branch={branch} />}
+                selected={selectedNodeId === nodeId}
+                onSelect={() => onSelectNode(nodeId)}
+                title={describeBranch(branch)}
+              />
             )
           })}
-        </ul>
+        </div>
       </section>
 
-      <section className="git-tree-section git-tree-section--commits">
-        <header>
-          <span>RECENT COMMITS</span>
-          <code>{commits.length.toString().padStart(2, '0')}</code>
-        </header>
-        <ul className="git-tree-list git-tree-list--commits">
-          {commits.slice(0, 18).map((commit, index) => {
+      {remoteBranches.length > 0 && (
+        <section className="git-sidebar__section">
+          <SectionHeader
+            title="Remote tracking"
+            readout={String(remoteBranches.length).padStart(2, '0')}
+          />
+          <div className="git-sidebar__list">
+            {remoteBranches.map((branch) => (
+              <DataRow
+                key={branch.name}
+                primary={branch.name}
+                lead={<span className="git-sidebar__remote-mark" />}
+                trail={branch.head.slice(0, 7)}
+                selected={false}
+                onSelect={() => onSelectNode(branchNodeId(branch.name))}
+                title={`${branch.name} → ${branch.head}`}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="git-sidebar__section">
+        <SectionHeader
+          title="History"
+          readout={`${Math.min(commits.length, COMMIT_INDEX_LIMIT)}/${stats.commitCount}`}
+        />
+        <div className="git-sidebar__list">
+          {commits.slice(0, COMMIT_INDEX_LIMIT).map((commit, index) => {
             const nodeId = commitNodeId(commit.hash)
             return (
-              <li key={commit.hash}>
-                <button
-                  className={selectedNodeId === nodeId ? 'is-selected' : ''}
-                  type="button"
-                  onClick={() => onSelectNode(nodeId)}
-                >
-                  <span className="git-tree-list__line" aria-hidden="true">
-                    <i />
-                  </span>
-                  <span>
-                    <code>{commit.short_hash}</code>
-                    <small title={commit.message}>{commit.message}</small>
-                  </span>
-                  <em>{String(index + 1).padStart(2, '0')}</em>
-                </button>
-              </li>
+              <DataRow
+                key={commit.hash}
+                primary={commit.short_hash}
+                secondary={commit.message}
+                lead={(
+                  <span
+                    className="git-sidebar__commit-mark"
+                    data-merge={commit.parents.length > 1}
+                    data-root={commit.parents.length === 0}
+                  />
+                )}
+                trail={String(index + 1).padStart(2, '0')}
+                selected={selectedNodeId === nodeId}
+                onSelect={() => onSelectNode(nodeId)}
+                title={commit.message}
+              />
             )
           })}
-        </ul>
+        </div>
       </section>
-
-      <footer className="git-sidebar__footer">
-        <span><i className="status-dot status-dot--green" />GIT ONLINE</span>
-        <span>LOCAL</span>
-      </footer>
-    </aside>
+    </Panel>
   )
 }

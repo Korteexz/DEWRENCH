@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { Button } from '../../../../design'
 import type { GitBranch } from '../../../../modules/git/types/repository'
 
 interface BranchInspectorProps {
@@ -45,14 +46,11 @@ export default function BranchInspector({
         </dl>
 
         {!branch.current && (
-          <button
-            className="inspector-action"
-            type="button"
-            onClick={() => void onSwitch()}
-            disabled={busy}
-          >
-            Switch branch
-          </button>
+          <div className="inspector-action">
+            <Button size="md" block onClick={() => void onSwitch()} disabled={busy}>
+              Switch branch
+            </Button>
+          </div>
         )}
 
         <section className="inspector-section">
@@ -64,14 +62,15 @@ export default function BranchInspector({
               placeholder="nome-da-branch"
               disabled={busy}
             />
-            <button
-              className="inspector-button--primary"
-              type="button"
+            <Button
+              size="md"
+              variant="primary"
+              block
               onClick={() => void handleCreateBranch()}
               disabled={busy || branchName.trim().length === 0}
             >
               Criar em {branch.name}
-            </button>
+            </Button>
           </div>
         </section>
 

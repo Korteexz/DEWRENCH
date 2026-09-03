@@ -39,7 +39,8 @@ Status: `[PLANNED]`
 
 Status: `[PLANNED]`
 
-- revert;
+- revert de commit comum e root `[IMPLEMENTED]`;
+- revert de merge commit com escolha de mainline;
 - recovery center;
 - conflito visível;
 - abort/continue seguros;

@@ -1,4 +1,5 @@
-mod modules;
+// `pub` para que os testes de integração em `tests/` alcancem o domínio.
+pub mod modules;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,6 +28,25 @@ pub fn run() {
             modules::git::commands::unstage_file,
             modules::git::commands::create_branch_from,
             modules::git::commands::switch_branch,
+            modules::git::commands::get_revert_preview,
+            modules::git::commands::revert_commit,
+
+            modules::git::commands::get_remotes,
+            modules::git::commands::add_remote,
+            modules::git::commands::remove_remote,
+            modules::git::commands::rename_remote,
+            modules::git::commands::set_remote_url,
+
+            modules::git::commands::get_push_plan,
+            modules::git::commands::push_branch,
+            modules::git::commands::fetch_remote,
+            modules::git::commands::get_pull_plan,
+            modules::git::commands::pull_branch,
+
+            modules::github::commands::get_github_context,
+            modules::github::commands::list_pull_requests,
+            modules::github::commands::create_pull_request,
+            modules::github::commands::open_github_in_browser,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

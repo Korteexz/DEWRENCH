@@ -4,6 +4,7 @@ import {
   useNodesState,
   type NodeMouseHandler,
   type ReactFlowInstance,
+  type Viewport,
 } from '@xyflow/react'
 import { useEffect, useMemo, useRef } from 'react'
 import '@xyflow/react/dist/style.css'
@@ -34,6 +35,11 @@ interface WorkspaceCanvasProps {
   onNodeContextMenu: NodeMouseHandler<WorkspaceFlowNode>
   onPaneClick: () => void
   onMoveStart: () => void
+  /**
+   * Emite a câmera real do campo (pan/zoom) para a instrumentação em volta.
+   * Deliberadamente um callback e não estado: pan dispara a cada frame.
+   */
+  onViewportChange?: (viewport: Viewport) => void
 }
 
 const FIT_VIEW_OPTIONS = {
@@ -59,12 +65,21 @@ export default function WorkspaceCanvas({
   onNodeContextMenu,
   onPaneClick,
   onMoveStart,
+  onViewportChange,
 }: WorkspaceCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkspaceFlowNode>(initialNodes)
   const canvasRef = useRef<HTMLDivElement>(null)
   const flowRef = useRef<ReactFlowInstance<WorkspaceFlowNode, WorkspaceFlowEdge>>(null)
   const gridRef = useRef<DeformableGridHandle>(null)
   const previousPointerRef = useRef<{ x: number; y: number } | null>(null)
+  /**
+   * Reenquadrar em toda mudança de tamanho era aceitável quando só a janela
+   * redimensionava. Com juntas arrastáveis o container muda a cada frame do
+   * arrasto, e refazer o fit por cima da câmera do usuário seria roubar o
+   * controle dele. A partir do primeiro gesto de pan/zoom, o enquadramento
+   * passa a ser responsabilidade dele.
+   */
+  const userFramedViewportRef = useRef(false)
   const graphPhysics = useGraphPhysics(initialNodes, edges, setNodes)
   const proximityNodeId = useNodeProximity(canvasRef)
   const graphFocus = useMemo(
@@ -100,6 +115,9 @@ export default function WorkspaceCanvas({
 
     let frame = 0
     const fitGraph = () => {
+      if (userFramedViewportRef.current) {
+        return
+      }
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
         void flowRef.current?.fitView(FIT_VIEW_OPTIONS)
@@ -124,7 +142,9 @@ export default function WorkspaceCanvas({
         nodeTypes={workspaceNodeTypes}
         onInit={(instance) => {
           flowRef.current = instance
-          void instance.fitView(FIT_VIEW_OPTIONS)
+          void instance.fitView(FIT_VIEW_OPTIONS).then(() => {
+            onViewportChange?.(instance.getViewport())
+          })
         }}
         onNodesChange={onNodesChange}
         onNodeClick={onNodeClick}
@@ -161,7 +181,14 @@ export default function WorkspaceCanvas({
           gridRef.current?.release()
         }}
         onPaneClick={onPaneClick}
-        onMoveStart={onMoveStart}
+        onMoveStart={(event) => {
+          // event nulo = movimento programático (fitView); só gesto conta.
+          if (event) {
+            userFramedViewportRef.current = true
+          }
+          onMoveStart()
+        }}
+        onMove={(_event, viewport) => onViewportChange?.(viewport)}
         onPaneContextMenu={(event) => event.preventDefault()}
         nodesConnectable={false}
         edgesReconnectable={false}

@@ -1,0 +1,32 @@
+/* ==========================================================================
+   DEWRENCH — SPACE & GEOMETRY
+   --------------------------------------------------------------------------
+   Unidade base 4px. Cantos são retos por princípio: um instrumento é usinado,
+   não arredondado. O raio de 2px existe apenas para tirar o serrilhado de
+   elementos muito pequenos.
+   ========================================================================== */
+
+:root {
+  --u: 4px;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s7: 32px;
+  --s8: 40px;
+
+  --r-none: 0;
+  --r-hair: 2px;
+
+  /* Geometria do chassi */
+  --chassis-bar-height: 52px;
+  --chassis-pane-left: 268px;
+  --chassis-pane-right: 324px;
+  --chassis-gap: 1px;          /* junta entre compartimentos */
+
+  --panel-pad: var(--s4);
+  --panel-head-height: 34px;
+  --row-height: 30px;
+}

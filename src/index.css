@@ -1,63 +1,68 @@
+/*
+ * Base do documento.
+ *
+ * Os tokens vivem em `src/design/tokens`. Este arquivo apenas os importa e
+ * mantém, temporariamente, os aliases `--color-*` usados pelas telas ainda não
+ * migradas (home, setup, nós do grafo, CRT). Cada alias apagado daqui é uma
+ * tela a menos presa ao CSS legado.
+ */
+@import './design/tokens/index.css';
+
 :root {
-  --color-bg-primary: #070908;
-  --color-bg-canvas: #090c0a;
-  --color-bg-panel: #0d110f;
-  --color-bg-panel-raised: #121713;
-  --color-border: #222923;
-  --color-border-strong: #354038;
-  --color-text-primary: #dce5dc;
-  --color-text-secondary: #9da99f;
-  --color-text-muted: #606d63;
-  --color-status-success: #55df9b;
-  --color-status-warning: #e8c969;
-  --color-status-danger: #ff746b;
-  --color-info: #68aee8;
-  --color-module-git: #f08a3c;
-  --color-module-docker: #65a9df;
-  --color-module-db: #d5bf68;
-  --color-module-rrf: #64cbb2;
+  /* -- Aliases legados -> paleta nova (remover conforme as telas migram) -- */
+  --color-bg-primary: var(--surface-void);
+  --color-bg-canvas: var(--surface-void);
+  --color-bg-panel: var(--surface-panel);
+  --color-bg-panel-raised: var(--surface-raised);
+  --color-border: var(--line-hair);
+  --color-border-strong: var(--line-edge);
+  --color-text-primary: var(--ink-hi);
+  --color-text-secondary: var(--ink-mid);
+  --color-text-muted: var(--ink-low);
+  --color-status-success: var(--signal-nominal);
+  --color-status-warning: var(--signal-warn);
+  --color-status-danger: var(--signal-fault);
+  --color-info: var(--signal-info);
+  --color-module-git: var(--instrument-git);
+  --color-module-docker: var(--instrument-docker);
+  --color-module-db: var(--instrument-db);
+  --color-module-rrf: var(--instrument-rrf);
 
-  /* Compatibility aliases keep setup/home UI on the same token system. */
-  --bg: var(--color-bg-primary);
-  --surface: var(--color-bg-panel);
-  --surface-raised: var(--color-bg-panel-raised);
-  --border: var(--color-border);
-  --border-strong: var(--color-border-strong);
-  --text: var(--color-text-secondary);
-  --text-strong: var(--color-text-primary);
-  --text-dim: var(--color-text-muted);
-  --accent: var(--color-module-git);
-  --accent-soft: rgba(240, 138, 60, 0.13);
-  --accent-border: rgba(240, 138, 60, 0.42);
-  --danger: var(--color-status-danger);
-  --canvas-dot: #384239;
+  --bg: var(--surface-void);
+  --surface: var(--surface-panel);
+  --surface-raised-legacy: var(--surface-raised);
+  --border: var(--line-hair);
+  --border-strong: var(--line-edge);
+  --text: var(--ink-mid);
+  --text-strong: var(--ink-hi);
+  --text-dim: var(--ink-low);
+  --accent: var(--instrument-current);
+  --accent-soft: var(--wash-instrument);
+  --accent-border: var(--instrument-current);
+  --danger: var(--signal-fault);
+  --canvas-dot: var(--ink-faint);
 
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --radius-small: 3px;
-  --radius-medium: 8px;
-  --motion-fast: 120ms;
-  --motion-standard: 240ms;
-  --motion-spring: 420ms cubic-bezier(0.2, 0.9, 0.2, 1.15);
-  --crt-scanline-opacity: 0.035;
-  --crt-vignette-opacity: 0.44;
-  --grid-spacing: 28px;
-  --grid-dot-color: rgba(144, 158, 148, 0.34);
-  --grid-lighting-strength: 0.028;
-  --panel-left-width: 252px;
-  --panel-right-width: 306px;
-  --system-bar-height: 72px;
+  --space-1: var(--s1);
+  --space-2: var(--s2);
+  --space-3: var(--s3);
+  --space-4: var(--s4);
+  --space-5: var(--s5);
+  --space-6: var(--s6);
+  --radius-small: var(--r-hair);
+  --radius-medium: var(--r-hair);
+  --motion-fast: var(--m-instant);
+  --motion-standard: var(--m-signal);
+  --motion-spring: var(--m-transit) var(--ease-out);
+  --crt-scanline-opacity: 0.022;
+  --crt-vignette-opacity: 0.34;
+  --grid-dot-color: var(--grid-dot);
 
-  --sans: Inter, "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
-  --mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --sans: var(--font-sans);
+  --mono: var(--font-mono);
 
-  color: var(--text);
-  background: var(--bg);
-  font-family: var(--sans);
+  color: var(--ink-mid);
+  background: var(--surface-void);
+  font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -92,19 +97,21 @@ button:not(:disabled) {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Foco visível é contraste, não cor de acento: precisa funcionar em
+   qualquer instrumento montado no chassi. */
 button:focus-visible,
 input:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: 3px;
+  outline: 1px solid var(--signal-active);
+  outline-offset: 2px;
 }
 
 code {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
 }
 
 ::selection {
-  background: rgba(85, 223, 155, 0.24);
-  color: var(--color-text-primary);
+  background: var(--wash-active);
+  color: var(--ink-hi);
 }
 
 .sr-only {
