@@ -12,6 +12,7 @@ pub fn get(
 ) -> Result<GitGraph, String> {
     Ok(GitGraph {
         branches: branches::get_all(path)?,
+        remote_branches: branches::get_remote_tracking(path)?,
         commits: get_commits(path)?,
     })
 }

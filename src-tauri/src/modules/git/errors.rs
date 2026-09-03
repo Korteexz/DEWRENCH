@@ -18,6 +18,34 @@ pub mod codes {
     pub const GIT_NOT_FOUND: &str = "GIT_NOT_FOUND";
     pub const PERMISSION_DENIED: &str = "PERMISSION_DENIED";
     pub const GIT_COMMAND_FAILED: &str = "GIT_COMMAND_FAILED";
+
+    // -- Configuração de remotes ------------------------------------------
+    pub const REMOTE_NOT_FOUND: &str = "REMOTE_NOT_FOUND";
+    pub const REMOTE_ALREADY_EXISTS: &str = "REMOTE_ALREADY_EXISTS";
+    pub const INVALID_REMOTE_NAME: &str = "INVALID_REMOTE_NAME";
+    pub const INVALID_REMOTE_URL: &str = "INVALID_REMOTE_URL";
+    pub const UNSAFE_REMOTE_URL: &str = "UNSAFE_REMOTE_URL";
+
+    // -- Operações de rede -------------------------------------------------
+    pub const NO_UPSTREAM: &str = "NO_UPSTREAM";
+    pub const UPSTREAM_GONE: &str = "UPSTREAM_GONE";
+    pub const NOTHING_TO_PUSH: &str = "NOTHING_TO_PUSH";
+    pub const NON_FAST_FORWARD: &str = "NON_FAST_FORWARD";
+    pub const PUSH_REJECTED: &str = "PUSH_REJECTED";
+    pub const AUTHENTICATION_REQUIRED: &str = "AUTHENTICATION_REQUIRED";
+    pub const NETWORK_UNREACHABLE: &str = "NETWORK_UNREACHABLE";
+    pub const REMOTE_REPOSITORY_NOT_FOUND: &str = "REMOTE_REPOSITORY_NOT_FOUND";
+    pub const UNBORN_BRANCH: &str = "UNBORN_BRANCH";
+    pub const DETACHED_HEAD: &str = "DETACHED_HEAD";
+    pub const DIVERGED_HISTORY: &str = "DIVERGED_HISTORY";
+    pub const LOCAL_CHANGES_WOULD_BE_LOST: &str = "LOCAL_CHANGES_WOULD_BE_LOST";
+    pub const MERGE_CONFLICT: &str = "MERGE_CONFLICT";
+    pub const STRATEGY_UNAVAILABLE: &str = "STRATEGY_UNAVAILABLE";
+
+    // -- Provider opcional (GitHub) ---------------------------------------
+    pub const PROVIDER_UNAVAILABLE: &str = "PROVIDER_UNAVAILABLE";
+    pub const PROVIDER_NOT_AUTHENTICATED: &str = "PROVIDER_NOT_AUTHENTICATED";
+    pub const PROVIDER_COMMAND_FAILED: &str = "PROVIDER_COMMAND_FAILED";
 }
 
 /// Limite de tamanho para texto técnico devolvido ao frontend.

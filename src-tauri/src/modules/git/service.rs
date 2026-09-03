@@ -7,9 +7,18 @@ use super::graph;
 use super::repository;
 use super::working_tree;
 
+use super::remote;
+use super::sync;
+
 use super::errors::GitOperationError;
 use super::models::{
+    GitFetchOutcome,
     GitGraph,
+    GitPullOutcome,
+    GitPullPlan,
+    GitPushOutcome,
+    GitPushPlan,
+    GitRemotesView,
     GitRepositoryDetails,
     GitRevertOutcome,
     GitRevertPreview,
@@ -185,5 +194,103 @@ pub fn revert_commit(
     history::revert_commit(
         repository_path,
         revision,
+    )
+}
+
+
+// ============================================================================
+// REMOTES
+// ============================================================================
+
+pub fn get_remotes(path: &str) -> Result<GitRemotesView, GitOperationError> {
+    remote::get_view(Path::new(path))
+}
+
+pub fn add_remote(path: &str, name: &str, url: &str) -> Result<(), GitOperationError> {
+    remote::add(Path::new(path), name, url)
+}
+
+pub fn remove_remote(path: &str, name: &str) -> Result<(), GitOperationError> {
+    remote::remove(Path::new(path), name)
+}
+
+pub fn rename_remote(path: &str, from: &str, to: &str) -> Result<(), GitOperationError> {
+    remote::rename(Path::new(path), from, to)
+}
+
+pub fn set_remote_url(
+    path: &str,
+    name: &str,
+    url: &str,
+    push_only: bool,
+) -> Result<(), GitOperationError> {
+    remote::set_url(Path::new(path), name, url, push_only)
+}
+
+// ============================================================================
+// PUSH / FETCH / PULL
+// ============================================================================
+
+pub fn get_push_plan(
+    path: &str,
+    remote_name: Option<String>,
+    source_branch: Option<String>,
+    target_branch: Option<String>,
+) -> Result<GitPushPlan, GitOperationError> {
+    sync::plan_push(
+        Path::new(path),
+        remote_name.as_deref(),
+        source_branch.as_deref(),
+        target_branch.as_deref(),
+    )
+}
+
+pub fn push_branch(
+    path: &str,
+    remote_name: Option<String>,
+    source_branch: Option<String>,
+    target_branch: Option<String>,
+    set_upstream: bool,
+) -> Result<GitPushOutcome, GitOperationError> {
+    sync::push(
+        Path::new(path),
+        remote_name.as_deref(),
+        source_branch.as_deref(),
+        target_branch.as_deref(),
+        set_upstream,
+    )
+}
+
+pub fn fetch_remote(
+    path: &str,
+    remote_name: Option<String>,
+    prune: bool,
+) -> Result<GitFetchOutcome, GitOperationError> {
+    sync::fetch(Path::new(path), remote_name.as_deref(), prune)
+}
+
+pub fn get_pull_plan(
+    path: &str,
+    remote_name: Option<String>,
+    remote_branch: Option<String>,
+) -> Result<GitPullPlan, GitOperationError> {
+    sync::plan_pull(
+        Path::new(path),
+        remote_name.as_deref(),
+        remote_branch.as_deref(),
+    )
+}
+
+pub fn pull_branch(
+    path: &str,
+    remote_name: Option<String>,
+    remote_branch: Option<String>,
+    strategy: &str,
+) -> Result<GitPullOutcome, GitOperationError> {
+    sync::pull(
+        Path::new(path),
+        remote_name.as_deref(),
+        remote_branch.as_deref(),
+        strategy,
     )
 }

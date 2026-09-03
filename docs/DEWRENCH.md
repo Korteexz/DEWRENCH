@@ -21,11 +21,15 @@ A interface é parte do produto, não apenas decoração. Relações, cores, for
 |---|---|---|
 | Shell desktop Tauri | `[IMPLEMENTED]` | Aplicação Tauri 2 com frontend React/Vite. |
 | Seleção de pasta local | `[IMPLEMENTED]` | Usa o seletor nativo de diretórios. |
-| Módulo Git local | `[PARTIAL]` | Leitura, grafo e mutações locais básicas. |
+| Módulo Git local | `[IMPLEMENTED]` | Leitura, grafo, mutações locais, revert e diff. |
 | Docker | `[PLANNED]` | Botão visível e inativo (`SOON`). |
 | Database Viewer | `[PLANNED]` | Botão visível e inativo. |
 | RRF | `[PLANNED]` | Botão visível e inativo. |
-| Git remote/GitHub | `[PLANNED]` | Estruturas vazias existem; não há funcionalidade ativa. |
+| Git remotes | `[IMPLEMENTED]` | Listar, adicionar, renomear, trocar URL, remover. |
+| Push / fetch / pull | `[IMPLEMENTED]` | Com preflight, erros tipados e estratégia explícita. |
+| Remote-tracking branches | `[IMPLEMENTED]` | Upstream, ahead/behind e divergência no índice. |
+| GitHub (provider) | `[PARTIAL]` | Via `gh` CLI: contexto, PRs, abrir no navegador, criar PR. |
+| Atividade / Temporal Matrix | `[IMPLEMENTED]` | Eventos do Git agregados em ano/mês/dia/hora. |
 | Plugins | `[PLANNED]` | Direção arquitetural, sem runtime de plugins. |
 | IA/RAG local | `[PLANNED]` | Futuro plugin opcional; não é dependência do produto. |
 
@@ -75,14 +79,12 @@ As versões exatas ficam nos manifests `package.json` e `src-tauri/Cargo.toml`.
 ## Limites conhecidos da baseline
 
 - Somente Git está ativo.
-- Remotes, fetch, pull, push, merge, revert, conflitos e PR/MR não estão implementados.
+- Merge de branches locais, resolução de conflito e force push não estão implementados.
 - O grafo lê até 80 commits e apenas branches locais.
-- O diff é texto bruto de um commit; não possui seleção de arquivo nem parser visual.
+- O diff tem parser próprio e leitura unificada ou lado a lado; ainda não permite selecionar arquivo específico no backend.
 - Erros são strings, normalmente derivadas do `stderr` do Git.
-- Não há suíte automatizada de testes no repositório.
-- O build TypeScript da baseline falha porque `stageFile` é importado mas não usado.
-- `[KNOWN DEFECT]` O botão Stage de arquivo individual chama atualmente o handler de Unstage. `Stage all` funciona por outro fluxo.
-- Arquivos de `core`, `remote`, `merge`, `history` e `github` existem como stubs vazios.
+- Testes: unitários em `src-tauri/src/modules/**` e integração em `src-tauri/tests/git_network.rs` (laboratórios Git em diretório temporário). O frontend ainda não tem suíte.
+- `core/*`, `git/merge.rs`, `git/parser.rs` e dois arquivos de `github/` (`auth.rs`, `pull_request.rs`) continuam stubs vazios e não declarados.
 
 ## Como navegar nesta documentação
 

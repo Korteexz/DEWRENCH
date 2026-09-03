@@ -46,7 +46,8 @@ export function DataRow({
         {secondary && <span className="dw-data-row__secondary">{secondary}</span>}
       </span>
       <span className="dw-data-row__trail">
-        {tag ? <span className="dw-data-row__tag">{tag}</span> : trail}
+        {tag && <span className="dw-data-row__tag">{tag}</span>}
+        {trail}
       </span>
     </button>
   )

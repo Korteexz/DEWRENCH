@@ -1,6 +1,10 @@
 import { useState } from 'react'
 
 import { Button } from '../../../../design'
+import GithubPanel from '../../../../modules/github/GithubPanel'
+import RemotesPanel from '../../../../modules/git/components/RemotesPanel'
+import SyncPanel from '../../../../modules/git/components/SyncPanel'
+import type { UseGitSyncResult } from '../../../../modules/git/hooks/useGitSync'
 import type { ProjectOpenResult } from '../../../../modules/git/types/project'
 import type { GitRepositoryDetails } from '../../../../modules/git/types/repository'
 import {
@@ -13,6 +17,8 @@ import {
 interface ProjectInspectorProps {
   project: ProjectOpenResult
   details: GitRepositoryDetails | null
+  /** Estado das operações de rede, vindo do container do módulo. */
+  sync: UseGitSyncResult
   loading: boolean
   busy: boolean
   error: string | null
@@ -27,6 +33,7 @@ interface ProjectInspectorProps {
 export default function ProjectInspector({
   project,
   details,
+  sync,
   loading,
   busy,
   error,
@@ -133,6 +140,48 @@ export default function ProjectInspector({
             </Button>
           </div>
         </section>
+
+        <SyncPanel
+          remotes={sync.remotes}
+          selectedRemote={sync.selectedRemote}
+          onSelectRemote={sync.selectRemote}
+          operation={sync.operation}
+          busy={sync.busy || busy}
+          failure={sync.failure}
+          pushPlan={sync.pushPlan}
+          pullPlan={sync.pullPlan}
+          fetchOutcome={sync.fetchOutcome}
+          pushSummary={sync.pushOutcome
+            ? `${sync.pushOutcome.pushed_commits} commit(s) enviados para ${sync.pushOutcome.remote}/${sync.pushOutcome.target_branch}`
+              + (sync.pushOutcome.created_remote_branch ? ' · branch remota criada' : '')
+              + (sync.pushOutcome.created_upstream ? ' · upstream configurado' : '')
+            : null}
+          pullSummary={sync.pullOutcome
+            ? `${sync.pullOutcome.applied_commits} commit(s) integrados por ${sync.pullOutcome.strategy}`
+              + (sync.pullOutcome.files_changed.length > 0
+                ? ` · ${sync.pullOutcome.files_changed.length} arquivo(s) alterados`
+                : '')
+            : null}
+          onFetch={() => void sync.runFetch()}
+          onPreparePull={() => void sync.preparePull()}
+          onPreparePush={() => void sync.preparePush()}
+          onConfirmPush={(setUpstream) => void sync.confirmPush(setUpstream)}
+          onConfirmPull={(strategy) => void sync.confirmPull(strategy)}
+          onDismiss={sync.dismiss}
+        />
+
+        <RemotesPanel
+          projectPath={project.path}
+          remotes={sync.remotes}
+          busy={sync.busy || busy}
+          onChanged={() => void sync.reloadRemotes()}
+        />
+
+        <GithubPanel
+          projectPath={project.path}
+          currentBranch={details?.branch ?? null}
+          busy={sync.busy || busy}
+        />
 
         {details && details.commits.length > 0 && (
           <section className="inspector-section">

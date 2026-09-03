@@ -141,3 +141,57 @@ Deve mostrar remote, branch, upstream e commits enviados. Force push fica em ní
 ### Merge
 
 Precisa modelar fast-forward, merge commit, conflito, abort e continuação.
+
+## Operações de rede
+
+> Estado: `[IMPLEMENTED]`. Ver [ADR-007](../../decisions/ADR-007-rede-como-limite-de-confianca.md).
+
+### Remotes
+
+`remote.rs` cuida de configuração; `sync.rs` cuida de execução. A separação é
+deliberada: configurar um destino e falar com ele têm riscos diferentes.
+
+- listagem com URL de fetch e de push, marcação de `origin` e do upstream;
+- identidade extraída da URL (host, owner, repositório, provider) sem carregar
+  credencial;
+- adicionar, remover, renomear e trocar URL, com validação por allowlist;
+- remote principal = upstream da branch atual → `origin` → único configurado.
+
+`origin` nunca é alterado sozinho: qualquer mudança exige ação explícita, e
+trocar a URL de `origin` mostra a consequência antes de aplicar.
+
+### Push
+
+Preflight (`get_push_plan`) devolve source, destination, ahead, behind,
+upstream e a lista real de commits a enviar. O push só executa depois disso, e
+recalcula o plano no momento da execução — a tela pode ter ficado aberta
+enquanto o repositório mudava.
+
+Casos tratados com código próprio: `NOTHING_TO_PUSH`, `REMOTE_NOT_FOUND`,
+`UNBORN_BRANCH`, `DETACHED_HEAD`, `NON_FAST_FORWARD`, `PUSH_REJECTED`,
+`AUTHENTICATION_REQUIRED`, `NETWORK_UNREACHABLE`,
+`REMOTE_REPOSITORY_NOT_FOUND`. O texto original do Git fica em `details`.
+
+Force push não existe como ação nesta versão.
+
+### Fetch
+
+Não altera o working tree. O relatório do que mudou é construído comparando as
+refs remotas antes e depois — dado real, não interpretação do texto do Git,
+que muda entre versões. `origin/HEAD` é ignorado por ser ponteiro simbólico.
+
+A contagem total de commits recebidos é a UNIÃO entre refs, não a soma: duas
+branches que avançam juntas compartilham commits.
+
+### Pull
+
+Preflight devolve incoming, outgoing, estratégias possíveis, alterações locais
+e risco de conflito (interseção entre arquivos sujos e arquivos que chegam).
+
+Estratégias: `fast-forward` (só quando não há commits locais pendentes),
+`merge` e `rebase`. O backend recomenda, o usuário escolhe, e o `git pull`
+genérico nunca é usado — seu comportamento depende de `pull.rebase`, que é
+configuração global invisível.
+
+Conflito desfaz a integração e reporta os arquivos. O repositório nunca fica
+parado num merge pela metade.

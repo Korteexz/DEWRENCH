@@ -22,7 +22,14 @@ export function SectionHeader({
       <TechnicalLabel tone="low">{title}</TechnicalLabel>
       <span className="dw-section-header__rule" aria-hidden="true" />
       {readout && (
-        <TechnicalLabel tone="faint" size="micro">{readout}</TechnicalLabel>
+        <TechnicalLabel
+          tone="faint"
+          size="micro"
+          className="dw-section-header__readout"
+          title={readout}
+        >
+          {readout}
+        </TechnicalLabel>
       )}
       {actions && <div className="dw-section-header__actions">{actions}</div>}
     </div>

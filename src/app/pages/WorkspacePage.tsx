@@ -17,6 +17,18 @@ import GitInspectorPane from '../../modules/git/components/GitInspectorPane'
 import GitSidebar from '../../modules/git/components/GitSidebar'
 import GitSystemReadout from '../../modules/git/components/GitSystemReadout'
 import { useGitGraph } from '../../modules/git/hooks/useGitGraph'
+import { useGitSync } from '../../modules/git/hooks/useGitSync'
+import { useActivity } from '../../activity/useActivity'
+import TemporalSurface from '../../activity/TemporalSurface'
+import TemporalInspector from '../../activity/TemporalInspector'
+import {
+  buildMatrix,
+  drillInto,
+  withEmptyCells,
+  type TemporalCell,
+  type TemporalRange,
+  type TemporalScale,
+} from '../../activity/temporal'
 import {
   createBranchFrom,
   createCommit,
@@ -100,6 +112,53 @@ export default function WorkspacePage({
   const [diffLoading, setDiffLoading] = useState(false)
   const [revert, setRevert] = useState<RevertState | null>(null)
 
+  /**
+   * Superfície do compartimento central. Topologia e matriz temporal são dois
+   * instrumentos sobre o MESMO repositório; trocar de instrumento não perde a
+   * seleção do outro.
+   */
+  const [surface, setSurface] = useState<'topology' | 'temporal'>('topology')
+  const [temporalScale, setTemporalScale] = useState<TemporalScale>('month')
+  const [temporalRange, setTemporalRange] = useState<TemporalRange | null>(null)
+  const [temporalCell, setTemporalCell] = useState<TemporalCell | null>(null)
+
+  const sync = useGitSync(project.path, () => void refresh().catch(() => undefined))
+  const activity = useActivity(project.path, project.git_state === 'repository')
+
+  const temporalMatrix = useMemo(
+    () => withEmptyCells(
+      buildMatrix(activity.stream?.events ?? [], temporalScale, temporalRange),
+    ),
+    [activity.stream, temporalRange, temporalScale],
+  )
+
+  /**
+   * O seletor de instrumento é o mesmo objeto nas duas superfícies: trocar de
+   * vista não pode parecer trocar de tela.
+   */
+  const surfaceSwitch = (
+    <span className="diff-view__modes" role="group" aria-label="Instrumento do compartimento">
+      <button
+        className="diff-view__mode"
+        type="button"
+        data-active={surface === 'topology'}
+        aria-pressed={surface === 'topology'}
+        onClick={() => setSurface('topology')}
+      >
+        TOPOLOGIA
+      </button>
+      <button
+        className="diff-view__mode"
+        type="button"
+        data-active={surface === 'temporal'}
+        aria-pressed={surface === 'temporal'}
+        onClick={() => setSurface('temporal')}
+      >
+        TEMPORAL
+      </button>
+    </span>
+  )
+
   const workspaceGraph = useMemo(
     () => adaptGitGraph(project, gitGraph),
     [gitGraph, project],
@@ -145,6 +204,7 @@ export default function WorkspacePage({
     try {
       await operation()
       await refresh()
+      void activity.reload()
       return true
     } catch (error) {
       setActionError(getErrorMessage(error))
@@ -362,10 +422,27 @@ export default function WorkspacePage({
     return revert?.commitHash === commitHash ? revert : null
   }
 
-  const inspector = selectedNode?.data.kind === 'project' ? (
+  const temporalDrill = temporalCell && drillInto(temporalCell.scale)
+    ? () => {
+        setTemporalRange({ scale: temporalCell.scale, key: temporalCell.key })
+        setTemporalScale(drillInto(temporalCell.scale)!)
+        setTemporalCell(null)
+      }
+    : null
+
+  const inspector = surface === 'temporal' && temporalCell ? (
+    <TemporalInspector
+      cell={temporalCell}
+      events={activity.stream?.events ?? []}
+      peak={temporalMatrix.peak}
+      onClose={() => setTemporalCell(null)}
+      onDrill={temporalDrill}
+    />
+  ) : selectedNode?.data.kind === 'project' ? (
     <ProjectInspector
       project={selectedNode.data.project}
       details={repositoryDetails}
+      sync={sync}
       loading={loading}
       busy={busyAction !== null}
       error={visibleError}
@@ -442,7 +519,27 @@ export default function WorkspacePage({
             onRefresh={() => void handleRefresh()}
           />
         )}
-        center={(
+        center={surface === 'temporal' ? (
+          <TemporalSurface
+            matrix={temporalMatrix}
+            stream={activity.stream}
+            loading={activity.loading}
+            error={activity.error}
+            scale={temporalScale}
+            range={temporalRange}
+            selectedKey={temporalCell?.key ?? null}
+            onScale={(next) => {
+              setTemporalScale(next)
+              setTemporalCell(null)
+            }}
+            onRange={(next) => {
+              setTemporalRange(next)
+              setTemporalCell(null)
+            }}
+            onSelect={setTemporalCell}
+            surfaceSwitch={surfaceSwitch}
+          />
+        ) : (
           <GitGraphViewport
             key={layoutVersion}
             projectName={project.name}
@@ -460,6 +557,7 @@ export default function WorkspacePage({
               closeContextMenu()
             }}
             onMoveStart={closeContextMenu}
+            surfaceSwitch={surfaceSwitch}
           />
         )}
         right={(

@@ -10,4 +10,7 @@ pub mod working_tree;
 pub mod commits;
 pub mod branches;
 pub mod graph;
+pub mod remote;
+pub mod sync;
+pub mod activity;
 pub mod history;

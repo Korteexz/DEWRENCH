@@ -591,3 +591,278 @@
   .git-inspector-pane { width: min(330px, calc(100vw - var(--s5))); }
   .graph-viewport-readout { display: none; }
 }
+
+/* ==========================================================================
+   SINCRONIZAÇÃO, REMOTES E PROVIDER
+   --------------------------------------------------------------------------
+   Operações de rede exibem plano antes de executar, e o plano é uma tabela de
+   instrumento — origem, destino, contagem — não um card de confirmação.
+   ========================================================================== */
+
+.sync-controls {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+}
+
+.sync-remote { display: grid; gap: var(--s1); min-width: 0; }
+
+.sync-remote select {
+  min-height: 26px;
+  padding: 0 var(--s2);
+  border: 1px solid var(--line-edge);
+  background: var(--surface-input);
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+}
+
+.sync-actions { display: flex; gap: var(--s1); margin-top: var(--s3); }
+.sync-actions > * { min-width: 0; flex: 1 1 auto; }
+.sync-actions .dw-button { width: 100%; }
+
+.sync-plan,
+.sync-report {
+  display: grid;
+  gap: var(--s2);
+  margin-top: var(--s3);
+  padding: var(--s3);
+  border: 1px solid var(--line-edge);
+  border-left: 2px solid var(--instrument-current);
+  background: var(--surface-raised);
+}
+
+.sync-report--ok { border-left-color: var(--signal-nominal); }
+
+.sync-report__title {
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  letter-spacing: var(--track-mid);
+}
+
+.sync-report__note { margin: 0; color: var(--ink-mid); font-size: var(--t-body); line-height: var(--leading-body); }
+
+.sync-plan__grid { display: grid; gap: var(--s2); margin: 0; }
+.sync-plan__grid > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: var(--s2); }
+
+.sync-plan__grid dt {
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+
+.sync-plan__grid dd {
+  overflow: hidden;
+  margin: 0;
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-plan__actions { display: flex; gap: var(--s2); margin-top: var(--s1); }
+.sync-plan__actions > * { flex: 1 1 auto; }
+.sync-plan__actions .dw-button { width: 100%; }
+
+.sync-commit-list { display: grid; gap: var(--s1); margin: 0; padding: 0; list-style: none; }
+
+.sync-commit-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.sync-commit-list code { color: var(--instrument-current); font-family: var(--font-mono); font-size: var(--t-micro); }
+.sync-commit-list span { overflow: hidden; color: var(--ink-mid); font-size: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
+.sync-commit-list__more { color: var(--ink-faint); font-family: var(--font-mono); font-size: var(--t-micro); }
+
+/* Fluxo do fetch: o dado desce do remote para as refs locais. */
+.sync-flow {
+  display: grid;
+  justify-items: center;
+  gap: var(--s1);
+  padding: var(--s2) 0;
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+}
+
+.sync-flow__pipe {
+  position: relative;
+  padding: var(--s3) 0 var(--s3);
+  color: var(--ink-faint);
+}
+
+.sync-flow__pipe::before,
+.sync-flow__pipe::after {
+  position: absolute;
+  left: 50%;
+  width: 1px;
+  background: var(--line-edge);
+  content: '';
+}
+
+.sync-flow__pipe::before { top: 0; height: var(--s3); }
+.sync-flow__pipe::after { bottom: 0; height: var(--s3); }
+.sync-flow__pipe[data-active='true'] { color: var(--instrument-current); }
+.sync-flow__pipe[data-active='true']::before,
+.sync-flow__pipe[data-active='true']::after { background: var(--instrument-current); }
+
+.sync-ref-list { display: grid; gap: var(--s1); margin: 0; padding: 0; list-style: none; }
+
+.sync-ref-list li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s2);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+}
+
+.sync-ref-list code { color: var(--ink-faint); letter-spacing: var(--track-mid); }
+.sync-ref-list li[data-kind='new'] code { color: var(--signal-nominal); }
+.sync-ref-list li[data-kind='pruned'] code { color: var(--signal-warn); }
+.sync-ref-list li[data-kind='forced'] code { color: var(--signal-fault); }
+.sync-ref-list span { overflow: hidden; color: var(--ink-mid); font-size: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
+.sync-ref-list em { color: var(--diff-add); font-style: normal; }
+
+.sync-strategies { display: grid; gap: var(--s3); }
+.sync-strategy { display: grid; gap: var(--s1); }
+.sync-strategy small { color: var(--ink-low); font-size: var(--t-body); line-height: var(--leading-body); }
+
+/* -- Remotes -------------------------------------------------------------- */
+.remote-list { display: grid; gap: var(--s2); margin: var(--s2) 0 0; padding: 0; list-style: none; }
+
+.remote-item {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s2);
+  border: 1px solid var(--line-hair);
+}
+
+.remote-item__head { display: flex; align-items: center; gap: var(--s2); }
+
+.remote-item__head strong {
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-data);
+  font-weight: var(--weight-medium);
+}
+
+.remote-item__tag {
+  padding: 1px var(--s1);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-mid);
+}
+
+.remote-item__tag[data-tone='upstream'] { border-color: var(--instrument-current); color: var(--instrument-current); }
+
+.remote-item__provider {
+  margin-left: auto;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+}
+
+.remote-item__urls { display: grid; gap: var(--s1); margin: 0; }
+.remote-item__urls > div { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: var(--s2); }
+.remote-item__urls dt { color: var(--ink-low); font-family: var(--font-mono); font-size: var(--t-micro); }
+.remote-item__urls dd { overflow: hidden; margin: 0; color: var(--ink-mid); font-family: var(--font-mono); font-size: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
+
+.remote-item__actions { display: flex; flex-wrap: wrap; gap: var(--s1); }
+
+.remote-form { display: grid; gap: var(--s2); margin-top: var(--s2); padding: var(--s2); border: 1px solid var(--line-edge); background: var(--surface-raised); }
+.remote-form--danger { border-left: 2px solid var(--signal-fault); }
+
+.remote-form input {
+  min-height: 28px;
+  padding: 0 var(--s2);
+  border: 1px solid var(--line-edge);
+  background: var(--surface-input);
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+}
+
+.remote-form input::placeholder { color: var(--ink-faint); }
+.remote-form__actions { display: flex; gap: var(--s2); }
+.remote-form__actions > * { flex: 1 1 auto; }
+.remote-form__actions .dw-button { width: 100%; }
+
+/* -- Provider GitHub ------------------------------------------------------ */
+.github-status { display: flex; gap: var(--s4); margin-top: var(--s3); }
+
+.github-limitation {
+  margin: var(--s2) 0 0;
+  padding-left: var(--s2);
+  border-left: 1px solid var(--signal-warn);
+  color: var(--signal-warn);
+  font-size: var(--t-body);
+  line-height: var(--leading-body);
+}
+
+.github-hint { color: var(--ink-faint); font-family: var(--font-mono); font-size: var(--t-micro); }
+
+.pr-list { display: grid; gap: var(--s2); margin: var(--s2) 0 0; padding: 0; list-style: none; }
+
+.pr-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.pr-list__number { color: var(--ink-faint); font-family: var(--font-mono); font-size: var(--t-micro); }
+.pr-list__title { overflow: hidden; color: var(--ink-hi); font-size: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
+
+.pr-list__state {
+  padding: 1px var(--s1);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+}
+
+.pr-list__state[data-state='open'] { border-color: var(--signal-nominal); color: var(--signal-nominal); }
+.pr-list__state[data-state='merged'] { border-color: var(--signal-info); color: var(--signal-info); }
+.pr-list__state[data-state='closed'] { border-color: var(--ink-faint); color: var(--ink-faint); }
+.pr-list li small { grid-column: 2 / -1; color: var(--ink-faint); font-family: var(--font-mono); font-size: var(--t-micro); }
+
+/* -- Rastreamento no índice ----------------------------------------------- */
+.git-tracking {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-mid);
+}
+
+.git-tracking b { color: var(--instrument-current); font-weight: var(--weight-regular); }
+.git-tracking i { color: var(--signal-info); font-style: normal; }
+.git-tracking[data-tone='ok'] { color: var(--ink-faint); }
+.git-tracking[data-tone='idle'] { color: var(--ink-faint); }
+.git-tracking[data-tone='warn'] { color: var(--signal-warn); }
+
+.git-sidebar__remote-mark {
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--ink-faint);
+  border-radius: 50%;
+  border-style: dashed;
+}

@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use super::git_cli;
-use super::models::GitCommit;
+use super::models::{GitCommit, GitGraphCommit};
 
 pub fn get_recent(
     path: &Path,
@@ -98,4 +98,55 @@ fn verify_commit(
     )?;
 
     Ok(())
+}
+
+/// Commits de um intervalo (`a..b`), no formato usado pelo grafo.
+///
+/// Push e pull precisam mostrar QUAIS commits entram ou saem; reusar o mesmo
+/// formato do grafo mantém uma única forma de commit no frontend.
+pub fn list_range(
+    path: &Path,
+    range: &str,
+    limit: usize,
+) -> Result<Vec<GitGraphCommit>, String> {
+    let limit_arg = format!("-{limit}");
+
+    let output = git_cli::run(
+        path,
+        &[
+            "log",
+            &limit_arg,
+            "--pretty=format:%H%x1f%h%x1f%P%x1f%an%x1f%s",
+            range,
+        ],
+    )?;
+
+    Ok(parse_commit_lines(&output))
+}
+
+/// Converte a saída de `git log --pretty` no modelo de commit do grafo.
+pub fn parse_commit_lines(raw: &str) -> Vec<GitGraphCommit> {
+    raw.lines()
+        .filter_map(|line| {
+            let parts: Vec<&str> = line.splitn(5, '\x1f').collect();
+
+            if parts.len() != 5 {
+                return None;
+            }
+
+            let parents = if parts[2].is_empty() {
+                Vec::new()
+            } else {
+                parts[2].split_whitespace().map(str::to_string).collect()
+            };
+
+            Some(GitGraphCommit {
+                hash: parts[0].to_string(),
+                short_hash: parts[1].to_string(),
+                parents,
+                author: parts[3].to_string(),
+                message: parts[4].to_string(),
+            })
+        })
+        .collect()
 }

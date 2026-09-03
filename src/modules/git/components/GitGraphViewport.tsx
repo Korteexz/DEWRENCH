@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, type ReactNode } from 'react'
 import type { NodeMouseHandler, Viewport } from '@xyflow/react'
 
 import WorkspaceCanvas from '../../../app/components/canvas/WorkspaceCanvas'
@@ -25,6 +25,8 @@ interface GitGraphViewportProps {
   onNodeContextMenu: NodeMouseHandler<WorkspaceFlowNode>
   onPaneClick: () => void
   onMoveStart: () => void
+  /** Seletor de instrumento do compartimento central. */
+  surfaceSwitch?: ReactNode
 }
 
 /**
@@ -47,6 +49,7 @@ export default function GitGraphViewport({
   onNodeContextMenu,
   onPaneClick,
   onMoveStart,
+  surfaceSwitch,
 }: GitGraphViewportProps) {
   const readoutRef = useRef<GraphViewportReadoutHandle>(null)
 
@@ -62,6 +65,7 @@ export default function GitGraphViewport({
       <header className="git-graph-viewport__bar">
         <span className="dw-panel__index">02</span>
         <TechnicalLabel tone="mid">Topology surface</TechnicalLabel>
+        {surfaceSwitch}
         <span className="git-graph-viewport__bar-rule" aria-hidden="true" />
         <span className="git-graph-viewport__ref">
           {branchName ?? 'DETACHED HEAD'}

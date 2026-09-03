@@ -103,9 +103,19 @@
 /* -- SectionHeader -------------------------------------------------------- */
 .dw-section-header {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: var(--s2);
   min-height: 22px;
+}
+
+/* A leitura cede antes do título: o rótulo identifica a seção, a leitura só
+   informa. Sem isso, um nome de branch longo empurra o cabeçalho para fora. */
+.dw-section-header__readout {
+  overflow: hidden;
+  min-width: 0;
+  flex: 0 1 auto;
+  text-overflow: ellipsis;
 }
 
 .dw-section-header__rule {
@@ -299,7 +309,7 @@
 .dw-data-row__main { display: grid; min-width: 0; gap: 2px; }
 .dw-data-row__primary { overflow: hidden; color: inherit; font-size: var(--t-data); letter-spacing: var(--track-mid); text-overflow: ellipsis; white-space: nowrap; }
 .dw-data-row__secondary { overflow: hidden; color: var(--ink-low); font-family: var(--font-sans); font-size: var(--t-body); text-overflow: ellipsis; white-space: nowrap; }
-.dw-data-row__trail { flex: 0 0 auto; color: var(--ink-faint); font-size: var(--t-micro); letter-spacing: var(--track-mid); }
+.dw-data-row__trail { display: flex; flex: 0 0 auto; align-items: center; gap: var(--s1); color: var(--ink-faint); font-size: var(--t-micro); letter-spacing: var(--track-mid); }
 .dw-data-row__tag {
   padding: 1px var(--s1);
   border: 1px solid var(--instrument-current);
@@ -369,6 +379,7 @@
   font-size: var(--t-micro);
   letter-spacing: var(--track-wide);
   text-transform: uppercase;
+  white-space: nowrap;
   transition:
     border-color var(--m-instant) var(--ease-out),
     color var(--m-instant) var(--ease-out),

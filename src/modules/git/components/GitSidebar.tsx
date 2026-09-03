@@ -8,7 +8,7 @@ import {
 } from '../../../design'
 import { branchNodeId, commitNodeId, PROJECT_NODE_ID } from '../../../app/graph/types'
 import type { ProjectOpenResult } from '../types/project'
-import type { GitGraph, GitRepositoryDetails } from '../types/repository'
+import type { GitBranch, GitGraph, GitRepositoryDetails } from '../types/repository'
 import { summarizeGraph } from '../view/graphStats'
 import { summarizeWorkingTree } from '../view/workingTree'
 
@@ -24,6 +24,41 @@ interface GitSidebarProps {
 
 /** Quantidade de commits listados no índice; o grafo continua mostrando todos. */
 const COMMIT_INDEX_LIMIT = 24
+
+/**
+ * Leitura de rastreamento de uma branch local.
+ *
+ * Setas com número em vez de rótulo por extenso: o índice é uma coluna
+ * estreita, e ↑/↓ com contagem é a convenção que qualquer usuário de Git já lê
+ * sem legenda.
+ */
+function TrackingReadout({ branch }: { branch: GitBranch }) {
+  if (branch.gone) {
+    return <span className="git-tracking" data-tone="warn">upstream ausente</span>
+  }
+
+  if (!branch.upstream) {
+    return <span className="git-tracking" data-tone="idle">local</span>
+  }
+
+  if (branch.ahead === 0 && branch.behind === 0) {
+    return <span className="git-tracking" data-tone="ok">sync</span>
+  }
+
+  return (
+    <span className="git-tracking" data-tone={branch.ahead > 0 && branch.behind > 0 ? 'warn' : 'active'}>
+      {branch.ahead > 0 && <b>↑{branch.ahead}</b>}
+      {branch.behind > 0 && <i>↓{branch.behind}</i>}
+    </span>
+  )
+}
+
+function describeBranch(branch: GitBranch): string {
+  const tracking = branch.upstream
+    ? `rastreando ${branch.upstream}${branch.gone ? ' (ausente)' : ''}`
+    : 'sem upstream'
+  return `${branch.name} → ${branch.head} · ${tracking}`
+}
 
 /**
  * Índice do repositório.
@@ -43,6 +78,7 @@ export default function GitSidebar({
   const stats = summarizeGraph(graph)
   const tree = summarizeWorkingTree(details?.files)
   const branches = graph?.branches ?? []
+  const remoteBranches = graph?.remote_branches ?? []
   const commits = graph?.commits ?? []
 
   return (
@@ -105,17 +141,40 @@ export default function GitSidebar({
               <DataRow
                 key={branch.name}
                 primary={branch.name}
+                secondary={branch.upstream ?? undefined}
                 lead={<span className="git-sidebar__branch-mark" />}
                 tag={branch.current ? 'HEAD' : undefined}
-                trail={branch.head.slice(0, 7)}
+                trail={<TrackingReadout branch={branch} />}
                 selected={selectedNodeId === nodeId}
                 onSelect={() => onSelectNode(nodeId)}
-                title={`${branch.name} → ${branch.head}`}
+                title={describeBranch(branch)}
               />
             )
           })}
         </div>
       </section>
+
+      {remoteBranches.length > 0 && (
+        <section className="git-sidebar__section">
+          <SectionHeader
+            title="Remote tracking"
+            readout={String(remoteBranches.length).padStart(2, '0')}
+          />
+          <div className="git-sidebar__list">
+            {remoteBranches.map((branch) => (
+              <DataRow
+                key={branch.name}
+                primary={branch.name}
+                lead={<span className="git-sidebar__remote-mark" />}
+                trail={branch.head.slice(0, 7)}
+                selected={false}
+                onSelect={() => onSelectNode(branchNodeId(branch.name))}
+                title={`${branch.name} → ${branch.head}`}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="git-sidebar__section">
         <SectionHeader

@@ -25,6 +25,27 @@ gitServices.ts → invoke(command, payload) → commands.rs → service.rs
 | `get_commit_diff` | `path`, `revision` | `string` |
 | `create_branch_from` | `path`, `startPoint`, `branchName` | `void` |
 | `switch_branch` | `path`, `branchName` | `void` |
+| `get_revert_preview` | `path`, `revision` | `GitRevertPreview` |
+| `revert_commit` | `path`, `revision` | `GitRevertOutcome` |
+| `get_remotes` | `path` | `GitRemotesView` |
+| `add_remote` | `path`, `name`, `url` | `void` |
+| `remove_remote` | `path`, `name` | `void` |
+| `rename_remote` | `path`, `from`, `to` | `void` |
+| `set_remote_url` | `path`, `name`, `url`, `pushOnly` | `void` |
+| `get_push_plan` | `path`, `remoteName?`, `sourceBranch?`, `targetBranch?` | `GitPushPlan` |
+| `push_branch` | `path`, `remoteName?`, `sourceBranch?`, `targetBranch?`, `setUpstream` | `GitPushOutcome` |
+| `fetch_remote` | `path`, `remoteName?`, `prune` | `GitFetchOutcome` |
+| `get_pull_plan` | `path`, `remoteName?`, `remoteBranch?` | `GitPullPlan` |
+| `pull_branch` | `path`, `remoteName?`, `remoteBranch?`, `strategy` | `GitPullOutcome` |
+| `get_github_context` | `path` | `GithubContext` |
+| `list_pull_requests` | `path`, `headBranch?` | `GithubPullRequest[]` |
+| `create_pull_request` | `path`, `title`, `body`, `head`, `base?`, `draft` | `string` (URL) |
+| `open_github_in_browser` | `path`, `branch?` | `string` (URL) |
+| `get_activity_stream` | `path`, `limit?` | `ActivityStream` |
+
+Os commands acima da linha do revert devolvem `Result<T, String>`; do revert
+em diante, `Result<T, GitOperationError>`. O contrato duplo é deliberado:
+migrar os antigos exigiria tocar em tudo que já funciona.
 
 Tauri converte camelCase do payload TypeScript para os parâmetros Rust declarados nos commands conforme a integração atual.
 
