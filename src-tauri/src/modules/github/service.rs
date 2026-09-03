@@ -253,8 +253,7 @@ pub fn create_pull_request(
         .stdout
         .lines()
         .map(str::trim)
-        .filter(|line| line.starts_with("https://"))
-        .next_back()
+        .rfind(|line| line.starts_with("https://"))
         .unwrap_or("")
         .to_string();
 
