@@ -37,6 +37,9 @@ pub enum ProgramId {
     Git,
     Gh,
     /// Apenas para exercitar tempo limite nos testes; não existe em release.
+    ///
+    /// O executável concreto depende da plataforma: não existe um binário de
+    /// espera com o mesmo nome no Unix e no Windows. Ver `executable`.
     #[cfg(test)]
     TestSlow,
 }
@@ -46,8 +49,16 @@ impl ProgramId {
         match self {
             ProgramId::Git => "git",
             ProgramId::Gh => "gh",
-            #[cfg(test)]
+            #[cfg(all(test, not(windows)))]
             ProgramId::TestSlow => "sleep",
+            // `sleep` não existe no Windows, e `timeout` — o equivalente óbvio —
+            // aborta com "Input redirection is not supported" quando o stdin
+            // não é console. O broker fecha o stdin de propósito, então
+            // `timeout` falharia sempre. `ping` está em System32 em toda
+            // instalação, espera de verdade e não se importa com stdio
+            // redirecionado.
+            #[cfg(all(test, windows))]
+            ProgramId::TestSlow => "ping",
         }
     }
 }
@@ -664,18 +675,41 @@ mod tests {
         assert_eq!(error.code(), "EXECUTION_FAILED");
     }
 
+    /// Argumentos que fazem `ProgramId::TestSlow` esperar ~30s.
+    ///
+    /// Mora aqui junto do teste porque forma um par indissociável com o
+    /// executável: trocar um sem o outro não espera nada.
+    #[cfg(not(windows))]
+    fn espera_de_trinta_segundos() -> Vec<String> {
+        vec!["30".to_string()]
+    }
+
+    /// `ping -n 31 127.0.0.1` envia 31 pacotes com 1s entre eles: ~30s de
+    /// espera, sem depender de rede externa.
+    #[cfg(windows)]
+    fn espera_de_trinta_segundos() -> Vec<String> {
+        vec!["-n".to_string(), "31".to_string(), "127.0.0.1".to_string()]
+    }
+
     #[test]
     fn tempo_limite_encerra_o_processo() {
         let root = lab("timeout");
         let started = Instant::now();
 
         let error = run(
-            ProcessRequest::new(ProgramId::TestSlow, vec!["30".to_string()], &root)
+            ProcessRequest::new(ProgramId::TestSlow, espera_de_trinta_segundos(), &root)
                 .with_timeout(Duration::from_millis(300)),
         )
         .unwrap_err();
 
-        assert_eq!(error.code(), "EXECUTION_TIMEOUT");
+        assert_eq!(
+            error.code(),
+            "EXECUTION_TIMEOUT",
+            "esperava tempo limite e veio {}: quase sempre significa que o \
+             programa de espera desta plataforma não pôde ser iniciado, e não \
+             que o encerramento por tempo limite quebrou — detalhe: {error}",
+            error.code()
+        );
         assert!(
             started.elapsed() < Duration::from_secs(5),
             "o processo não foi encerrado no prazo"
