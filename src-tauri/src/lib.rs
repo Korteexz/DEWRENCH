@@ -47,6 +47,8 @@ pub fn run() {
             modules::github::commands::list_pull_requests,
             modules::github::commands::create_pull_request,
             modules::github::commands::open_github_in_browser,
+
+            modules::activity::commands::get_activity_stream,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
