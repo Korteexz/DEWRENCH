@@ -11,10 +11,11 @@
 //! Toda função degrada: sem `gh`, sem autenticação ou sem remote do GitHub, o
 //! resultado descreve a limitação em vez de falhar.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+use crate::core::state;
 use crate::modules::git::errors::{codes, sanitize, GitOperationError};
 use crate::modules::git::remote;
 
@@ -24,7 +25,21 @@ use super::provider;
 /// Limite de PRs lidos de uma vez.
 const PULL_REQUEST_LIMIT: &str = "30";
 
+
+/// Fronteira de autoridade do provider.
+///
+/// O caminho chega do IPC exatamente como no módulo Git, e vale a mesma regra:
+/// ele não é credencial. Sem workspace registrado, nem a detecção de contexto
+/// acontece — o que também evita que `gh` seja iniciada apontando para um
+/// diretório arbitrário da máquina.
+fn authority(path: &Path) -> Result<PathBuf, GitOperationError> {
+    state::authorize_workspace(&path.to_string_lossy())
+        .map(|record| record.scope.root().to_path_buf())
+        .map_err(GitOperationError::from)
+}
+
 pub fn get_context(path: &Path) -> Result<GithubContext, GitOperationError> {
+    let path = &authority(path)?;
     let view = remote::get_view(path)?;
 
     // Preferir o remote que a branch atual usa; senão, o primeiro do GitHub.
@@ -116,6 +131,7 @@ pub fn list_pull_requests(
     path: &Path,
     head_branch: Option<&str>,
 ) -> Result<Vec<GithubPullRequest>, GitOperationError> {
+    let path = &authority(path)?;
     ensure_usable(path)?;
 
     let mut args: Vec<&str> = vec![
@@ -203,6 +219,7 @@ pub fn create_pull_request(
     head: &str,
     draft: bool,
 ) -> Result<String, GitOperationError> {
+    let path = &authority(path)?;
     ensure_usable(path)?;
 
     let title = title.trim();

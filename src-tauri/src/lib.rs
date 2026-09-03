@@ -1,4 +1,10 @@
+//! Ponto de entrada do backend.
+//!
+//! `core` vem antes de `modules` de propósito, inclusive na leitura: módulos
+//! descrevem intenção, o Core decide autoridade e executa as fronteiras.
+
 // `pub` para que os testes de integração em `tests/` alcancem o domínio.
+pub mod core;
 pub mod modules;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

@@ -603,6 +603,34 @@ No exploit found within tested scope.
 Residual concerns remain.
 ```
 
+## Single-Agent Authorship
+
+The role separation above describes the intended structure. It is not always
+the structure that produced a given change.
+
+When one agent performs Builder, Red Team and Blue Team work within a single
+session, the separation that makes the roles meaningful — an adversary who did
+not write the code and does not share its assumptions — is absent. The roles
+were still executed; they were not executed independently.
+
+That is not a reason to refuse the work. It is a reason to state it.
+
+Any security work produced under single-agent authorship must record:
+
+```text
+which roles were performed by the same agent;
+which findings were produced by that agent attacking its own implementation;
+which attacks were attempted and produced no finding;
+which surfaces were not attacked at all.
+```
+
+A finding produced this way is still a finding: the exploit either reproduced
+or it did not, and the reproduction is the evidence. What single-agent
+authorship cannot produce is the ABSENCE of findings. An agent does not attack
+the assumption it did not know it was making.
+
+Work produced this way is a candidate for review, never a conclusion.
+
 ## Codex — Blue Team
 
 Blue Team work must be performed with a defensive context distinct from normal implementation whenever practical.
@@ -680,6 +708,61 @@ residual risk
 Confidence is useful.
 
 Reproduction is better.
+
+---
+
+## SELF-AUTHORSHIP IS NOT EVIDENCE OF SECURITY
+
+Implementing a protection is not evidence that the protection works.
+
+The agent that writes a defence must treat it as unverified until an
+adversarial test has attempted to reproduce the violation the defence claims to
+prevent. Design quality, architectural shape, type discipline and the effort
+spent are not evidence. They are reasons to expect the defence might work,
+which is a different claim.
+
+Where the same agent performs both roles, they must be executed as separate
+phases: build first, then take an explicitly adversarial position against what
+was built. The phases exist to make the second one costly enough to be real.
+
+This rule does not say "the agent is trustworthy because it tested its own
+code." It says the opposite: the test is the evidence, the agent is not, and a
+test written by the author of the defence covers the attacks the author thought
+of.
+
+See also `docs/Adversarial Independence Principle.md`.
+
+---
+
+## SECURITY CLAIMS REQUIRE EVIDENCE
+
+A security claim must name what was tested, how, and what was observed.
+
+Permitted:
+
+```text
+Path traversal via ../ was blocked in the cases tested.
+core.fsmonitor pointing at an executable did not run in the flows exercised.
+The hostile branch name --orphan=<x> reproduced before the fix and does not
+reproduce after it.
+```
+
+Not permitted:
+
+```text
+The filesystem is secure.
+DEWRENCH is safe.
+Command injection is impossible.
+```
+
+The absence of a vulnerability during testing is not the absence of the
+vulnerability. It is the absence of that test finding it.
+
+Every claim carries its scope: which version, which platform, which flow. A
+claim that survives the removal of its scope has stopped being a claim about
+this system.
+
+See also `docs/Security Is Not a Property of Intent.md`.
 
 ---
 

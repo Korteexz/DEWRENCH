@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use crate::core::process::operand;
+
 use super::git_cli;
 use super::models::GitBranch;
 
@@ -162,6 +164,12 @@ pub fn create_from(
         );
     }
 
+    // Camada 1: o Core recusa o valor antes que ele vire argv.
+    // `check-ref-format` e `rev-parse` NÃO aceitam `--`, então aqui esta é a
+    // única barreira — e é por isso que ela vem antes de qualquer execução.
+    let branch_name = operand(branch_name).map_err(|error| error.to_string())?;
+    let start_point = operand(start_point).map_err(|error| error.to_string())?;
+
     git_cli::run(
         path,
         &[
@@ -180,10 +188,13 @@ pub fn create_from(
         ],
     )?;
 
+    // Camada 2: `--` encerra as opções, então nem um valor que escapasse da
+    // camada 1 seria lido como opção por este comando.
     git_cli::run(
         path,
         &[
             "branch",
+            "--",
             branch_name,
             start_point,
         ],
@@ -204,10 +215,15 @@ pub fn switch(
         );
     }
 
+    // Duas camadas. Sem elas, `--orphan=<nome>` transformava "trocar de branch"
+    // em "criar branch órfã e mover o HEAD" — reproduzido em laboratório.
+    let branch_name = operand(branch_name).map_err(|error| error.to_string())?;
+
     git_cli::run(
         path,
         &[
             "switch",
+            "--",
             branch_name,
         ],
     )?;

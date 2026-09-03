@@ -82,12 +82,51 @@ Não retornar tokens, credenciais, headers ou comandos com segredos.
 
 ## Validações por entrada
 
-- `path`: canonicalizar e confirmar escopo.
-- `file`: resolver em relação ao repo e impedir escape.
-- `branchName`: `git check-ref-format --branch`.
-- `startPoint`/`revision`: `git rev-parse --verify` com tipo esperado.
-- `remote`: allowlist de formato/protocolo e exibição clara do destino.
-- `message`: não vazia; tamanho e caracteres devem ter limite razoável.
+O `path` do IPC **não é credencial**. Ele é uma referência que precisa
+corresponder a um workspace já registrado — o registro acontece uma vez, quando
+o usuário abre o projeto (`open_project`), e é verificado em toda chamada
+seguinte. Um caminho válido que o usuário nunca abriu é recusado.
+
+- `path`: `core::state::authorize_workspace` — resolve canonicamente, compara
+  com o registro e devolve a raiz REGISTRADA, que é a usada na execução.
+- `file`: resolvido em relação ao repositório; `git add`/`restore` usam `--`.
+- `branchName`: `core::process::operand` **antes** de qualquer execução, depois
+  `git check-ref-format --branch`, depois `--` no comando que aceita.
+- `startPoint`/`revision`: `operand` antes de `git rev-parse --verify`. A ordem
+  importa: `rev-parse` é um processo, e um valor iniciado por `-` já teria sido
+  interpretado por ele.
+- `remote`: precisa existir no repositório; URL por allowlist de protocolo, com
+  `ext::` e `fd::` recusados.
+- `message`: não vazia; passa como argumento separado, nunca por shell.
+
+### Códigos de erro do Core
+
+Recusa de segurança cruza o IPC com o código do próprio Core, sem tradução:
+
+```text
+WORKSPACE_NOT_REGISTERED   o caminho não corresponde a um projeto aberto
+WORKSPACE_NOT_TRUSTED      confiança insuficiente para esta operação
+PATH_OUTSIDE_SCOPE         o recurso resolvido cai fora da autoridade
+PATH_UNRESOLVABLE          o caminho não resolve para um objeto real
+ARGUMENT_REJECTED          o valor viraria opção do programa
+EXECUTION_TIMEOUT          o processo passou do prazo e foi encerrado
+EXECUTION_FAILED           o processo não pôde ser iniciado
+RESOURCE_LOCKED            outro fluxo detém a autoridade sobre o recurso
+APPROVAL_STALE             a aprovação não corresponde ao estado atual
+APPROVAL_EXPIRED           a aprovação expirou
+POLICY_DENIED              a política negou a ação
+APPROVAL_REQUIRED          falta aprovação explícita
+```
+
+Os quatro últimos existem no tipo mas **nenhum fluxo os emite hoje**.
+
+## Mudança de comportamento registrada
+
+`open_project` passou a devolver o caminho sem o prefixo verbatim do Windows
+(`\\?\C:\...` vira `C:\...`). O nome do command, o payload e o formato do
+retorno são os mesmos; muda o VALOR da string. A autoridade não depende dessa
+forma — ela é reresolvida canonicamente a cada chamada —, então um caminho
+guardado no formato antigo continua funcionando.
 
 ## Regra de compatibilidade
 
