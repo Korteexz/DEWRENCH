@@ -49,10 +49,18 @@ pub fn run() {
             modules::git::commands::get_pull_plan,
             modules::git::commands::pull_branch,
 
+            modules::git::commands::get_branch_comparison,
+            modules::git::commands::get_comparison_diff,
+
             modules::github::commands::get_github_context,
             modules::github::commands::list_pull_requests,
             modules::github::commands::create_pull_request,
             modules::github::commands::open_github_in_browser,
+            modules::github::commands::get_pull_request,
+            modules::github::commands::get_pull_request_diff,
+            modules::github::commands::get_pull_request_plan,
+            modules::github::commands::merge_pull_request,
+            modules::github::commands::close_pull_request,
 
             modules::activity::commands::get_activity_stream,
         ])

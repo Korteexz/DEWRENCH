@@ -1,19 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { Button, Metric, MetricCluster, SectionHeader, StatusIndicator } from '../../design'
-import {
-  describeFailure,
-  isGitOperationError,
-  toGitFailure,
-  type GitFailure,
-} from '../git/types/revert'
-import {
-  createPullRequest,
-  getGithubContext,
-  listPullRequests,
-  openGithubInBrowser,
-} from './services'
-import type { GithubContext, GithubPullRequest } from './types'
+import { describeFailure, isGitOperationError } from '../git/types/revert'
+import ComparePanel from './ComparePanel'
+import PullRequestPanel from './PullRequestPanel'
+import { openGithubInBrowser } from './services'
+import { useGithub } from './useGithub'
 
 interface GithubPanelProps {
   projectPath: string
@@ -27,55 +19,54 @@ interface GithubPanelProps {
  * O painel só aparece quando algum remote aponta para o GitHub, e degrada em
  * degraus visíveis: sem `gh` instalada, mostra o que o Git local já sabe; sem
  * autenticação, explica o que falta. Nenhuma função do Git depende dele.
+ *
+ * O Compare é a exceção deliberada: ele é calculado pelo Git local e continua
+ * disponível mesmo sem `gh` autenticada.
  */
 export default function GithubPanel({
   projectPath,
   currentBranch,
   busy,
 }: GithubPanelProps) {
-  const [context, setContext] = useState<GithubContext | null>(null)
-  const [pullRequests, setPullRequests] = useState<GithubPullRequest[]>([])
-  const [loading, setLoading] = useState(false)
-  const [failure, setFailure] = useState<GitFailure | null>(null)
+  const github = useGithub(projectPath)
+  const [selected, setSelected] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
-  const [createdUrl, setCreatedUrl] = useState<string | null>(null)
+  const [body, setBody] = useState('')
+  const [base, setBase] = useState('')
+  const [draft, setDraft] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setFailure(null)
-
-    try {
-      const next = await getGithubContext(projectPath)
-      setContext(next)
-
-      if (next.authenticated) {
-        try {
-          setPullRequests(await listPullRequests(projectPath, currentBranch ?? undefined))
-        } catch (error) {
-          // PR indisponível não invalida o contexto já lido.
-          setFailure(toGitFailure(error))
-        }
-      } else {
-        setPullRequests([])
-      }
-    } catch (error) {
-      setContext(null)
-      setFailure(toGitFailure(error))
-    } finally {
-      setLoading(false)
-    }
-  }, [currentBranch, projectPath])
-
-  useEffect(() => {
-    void load()
-  }, [load])
+  const context = github.context
+  const failure = github.failure
 
   if (!context?.detected) {
     return null
   }
 
-  const disabled = busy || loading || creating
+  const disabled = busy || github.loading || github.busy
+  const effectiveBase = base.trim().length > 0
+    ? base.trim()
+    : context.default_branch
+
+  async function handleCreate(): Promise<void> {
+    if (!currentBranch) {
+      return
+    }
+
+    const created = await github.create(
+      title,
+      body,
+      currentBranch,
+      effectiveBase,
+      draft,
+    )
+
+    if (created) {
+      setTitle('')
+      setBody('')
+      setCreating(false)
+    }
+  }
 
   return (
     <section className="inspector-section">
@@ -85,8 +76,12 @@ export default function GithubPanel({
           ? `${context.owner}/${context.repository}`
           : undefined}
         actions={(
-          <Button onClick={() => void load()} disabled={disabled} busy={loading}>
-            {loading ? 'Lendo…' : 'Atualizar'}
+          <Button
+            onClick={() => void github.reload()}
+            disabled={disabled}
+            busy={github.loading}
+          >
+            {github.loading ? 'Lendo…' : 'Atualizar'}
           </Button>
         )}
       />
@@ -129,20 +124,89 @@ export default function GithubPanel({
 
       {context.authenticated && (
         <>
-          <p className="revert-panel__label">
-            Pull requests desta branch ({pullRequests.length})
-          </p>
+          <SectionHeader
+            title="Pull requests"
+            readout={github.pullRequests.length.toString().padStart(2, '0')}
+            actions={currentBranch
+              ? (
+                <Button
+                  onClick={() => setCreating((value) => !value)}
+                  disabled={disabled}
+                >
+                  {creating ? 'Cancelar' : 'Abrir pull request'}
+                </Button>
+              )
+              : undefined}
+          />
 
-          {pullRequests.length === 0 ? (
+          {creating && currentBranch && (
+            <div className="remote-form">
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Título do pull request"
+                aria-label="Título do pull request"
+                disabled={disabled}
+              />
+              <textarea
+                value={body}
+                onChange={(event) => setBody(event.target.value)}
+                placeholder="Descrição (opcional)"
+                aria-label="Descrição do pull request"
+                rows={3}
+                disabled={disabled}
+              />
+              <input
+                value={base}
+                onChange={(event) => setBase(event.target.value)}
+                placeholder={context.default_branch ?? 'Branch de destino'}
+                aria-label="Branch de destino"
+                disabled={disabled}
+              />
+              <label className="github-hint">
+                <input
+                  type="checkbox"
+                  checked={draft}
+                  onChange={(event) => setDraft(event.target.checked)}
+                  disabled={disabled}
+                />
+                Abrir como rascunho (draft)
+              </label>
+              <div className="remote-form__actions">
+                <Button
+                  variant="primary"
+                  disabled={disabled || title.trim().length === 0}
+                  busy={github.busy}
+                  onClick={() => void handleCreate()}
+                >
+                  Abrir pull request
+                </Button>
+              </div>
+              <small className="github-hint">
+                Base: {effectiveBase ?? 'padrão do repositório'} · origem: {currentBranch}
+              </small>
+            </div>
+          )}
+
+          {github.pullRequests.length === 0 ? (
             <p className="inspector-empty">
-              Nenhum pull request para {currentBranch ?? 'esta branch'}.
+              Nenhum pull request neste repositório.
             </p>
           ) : (
             <ul className="pr-list">
-              {pullRequests.map((pr) => (
-                <li key={pr.number}>
+              {github.pullRequests.map((pr) => (
+                <li key={pr.number} data-selected={selected === pr.number}>
                   <span className="pr-list__number">#{pr.number}</span>
-                  <span className="pr-list__title" title={pr.title}>{pr.title}</span>
+                  <button
+                    type="button"
+                    className="pr-list__title pr-list__open"
+                    title={pr.title}
+                    onClick={() => setSelected(
+                      selected === pr.number ? null : pr.number,
+                    )}
+                  >
+                    {pr.title}
+                  </button>
                   <span className="pr-list__state" data-state={pr.state.toLowerCase()}>
                     {pr.is_draft ? 'DRAFT' : pr.state}
                   </span>
@@ -152,54 +216,31 @@ export default function GithubPanel({
             </ul>
           )}
 
-          {pullRequests.length === 0 && currentBranch && (
-            <div className="remote-form">
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Título do pull request"
-                disabled={disabled}
-              />
-              <div className="remote-form__actions">
-                <Button
-                  variant="primary"
-                  disabled={disabled || title.trim().length === 0}
-                  busy={creating}
-                  onClick={() => {
-                    setCreating(true)
-                    setFailure(null)
-                    setCreatedUrl(null)
-                    void createPullRequest(
-                      projectPath,
-                      title,
-                      '',
-                      currentBranch,
-                      context.default_branch,
-                      false,
-                    )
-                      .then((url) => {
-                        setCreatedUrl(url)
-                        setTitle('')
-                        return load()
-                      })
-                      .catch((error: unknown) => setFailure(toGitFailure(error)))
-                      .finally(() => setCreating(false))
-                  }}
-                >
-                  Abrir pull request
-                </Button>
-              </div>
-              <small className="github-hint">
-                Base: {context.default_branch ?? 'padrão do repositório'} · origem: {currentBranch}
-              </small>
-            </div>
+          {github.createdUrl && (
+            <p className="sync-report__note">
+              Pull request criado: {github.createdUrl}
+            </p>
           )}
 
-          {createdUrl && (
-            <p className="sync-report__note">Pull request criado: {createdUrl}</p>
+          {selected !== null && (
+            <PullRequestPanel
+              projectPath={projectPath}
+              number={selected}
+              busy={busy}
+              onClose={() => setSelected(null)}
+              onChanged={() => void github.reload()}
+            />
           )}
         </>
       )}
+
+      <ComparePanel
+        projectPath={projectPath}
+        defaultBase={context.default_branch}
+        defaultHead={currentBranch}
+        busy={busy}
+        webUrl={context.web_url}
+      />
 
       {failure && (
         <div className="inspector-error" role="alert">
@@ -207,6 +248,7 @@ export default function GithubPanel({
           {isGitOperationError(failure) && failure.suggestedAction && (
             <p className="revert-error__action">{failure.suggestedAction}</p>
           )}
+          <Button onClick={github.dismiss}>Dispensar</Button>
         </div>
       )}
     </section>

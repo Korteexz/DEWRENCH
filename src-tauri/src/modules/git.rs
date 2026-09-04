@@ -12,5 +12,6 @@ pub mod branches;
 pub mod graph;
 pub mod remote;
 pub mod sync;
+pub mod compare;
 pub mod activity;
 pub mod history;

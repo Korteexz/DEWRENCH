@@ -239,3 +239,26 @@ pub fn pull_branch(
 ) -> Result<super::models::GitPullOutcome, GitOperationError> {
     service::pull_branch(&path, remote_name, remote_branch, &strategy)
 }
+
+// ============================================================================
+// COMPARE
+// ============================================================================
+
+/// Comparação read-only entre duas referências locais. Não fala com a rede.
+#[tauri::command]
+pub fn get_branch_comparison(
+    path: String,
+    base: String,
+    head: String,
+) -> Result<super::models::GitBranchComparison, GitOperationError> {
+    service::get_branch_comparison(&path, &base, &head)
+}
+
+#[tauri::command]
+pub fn get_comparison_diff(
+    path: String,
+    base: String,
+    head: String,
+) -> Result<String, GitOperationError> {
+    service::get_comparison_diff(&path, &base, &head)
+}

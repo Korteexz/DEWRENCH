@@ -141,3 +141,31 @@ fn git_dir_herdado_do_ambiente_nao_redireciona_a_leitura() {
     }
 }
 
+
+/// `PAGER`/`GH_PAGER` herdados do ambiente apontam para um PROGRAMA.
+///
+/// O prelúdio do git já força `core.pager=cat`, mas a variável continuava sendo
+/// herdada por qualquer processo iniciado pelo broker — inclusive a `gh`, que
+/// não tem prelúdio. Este teste exercita o caminho real de leitura com o
+/// ambiente contaminado e afirma que nada foi executado.
+#[test]
+fn pager_herdado_do_ambiente_nao_executa() {
+    let _trava = AMBIENTE.lock().unwrap_or_else(|e| e.into_inner());
+    let alvo = Alvo::novo("env_pager");
+    let script = escrever_script(&alvo.root, "envpager", "INVADIDO_PAGER", &alvo.fora);
+
+    std::env::set_var("PAGER", &script);
+    std::env::set_var("GH_PAGER", &script);
+
+    let aberto = git_service::open_project(&alvo.root.to_string_lossy()).expect("abrir");
+    let _ = git_service::get_repository_details(&aberto.path);
+    let _ = git_service::get_commit_diff(&aberto.path, "HEAD");
+
+    std::env::remove_var("PAGER");
+    std::env::remove_var("GH_PAGER");
+
+    assert!(
+        !alvo.marcador("INVADIDO_PAGER"),
+        "PAGER herdado do ambiente foi executado"
+    );
+}

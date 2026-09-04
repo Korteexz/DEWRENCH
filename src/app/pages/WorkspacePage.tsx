@@ -473,6 +473,7 @@ export default function WorkspacePage({
       error={visibleError}
       onClose={() => setSelectedNodeId(null)}
       onViewDiff={() => void handleViewDiff(selectedCommit)}
+      onCloseDiff={() => setCommitDiff(null)}
       onCreateBranch={(name) => handleCreateBranch(selectedCommit.hash, name)}
       revertPreview={revertFor(selectedCommit.hash)?.preview ?? null}
       revertLoading={revertFor(selectedCommit.hash)?.loading ?? false}

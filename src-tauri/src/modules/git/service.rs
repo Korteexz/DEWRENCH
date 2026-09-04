@@ -4,6 +4,7 @@ use crate::core::state;
 
 use super::branches;
 use super::commits;
+use super::compare;
 use super::history;
 use super::graph;
 use super::repository;
@@ -14,6 +15,7 @@ use super::sync;
 
 use super::errors::GitOperationError;
 use super::models::{
+    GitBranchComparison,
     GitFetchOutcome,
     GitGraph,
     GitPullOutcome,
@@ -321,4 +323,24 @@ pub fn pull_branch(
         remote_branch.as_deref(),
         strategy,
     )
+}
+
+// ============================================================================
+// COMPARE
+// ============================================================================
+
+pub fn get_branch_comparison(
+    path: &str,
+    base: &str,
+    head: &str,
+) -> Result<GitBranchComparison, GitOperationError> {
+    compare::compare(&authority_typed(path)?, base, head)
+}
+
+pub fn get_comparison_diff(
+    path: &str,
+    base: &str,
+    head: &str,
+) -> Result<String, GitOperationError> {
+    compare::diff(&authority_typed(path)?, base, head)
 }

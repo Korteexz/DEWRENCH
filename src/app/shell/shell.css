@@ -8,7 +8,7 @@
 .dw-shell {
   display: grid;
   width: 100vw;
-  height: 100vh;
+  height: var(--app-height, 100vh);
   grid-template-rows: var(--chassis-bar-height) minmax(0, 1fr);
   background: var(--surface-void);
 }
@@ -161,4 +161,99 @@
 @media (max-width: 940px) {
   .dw-systembar { grid-template-columns: minmax(0, 1fr) minmax(0, auto); gap: var(--s3); }
   .dw-module-rail { display: none; }
+}
+
+/* -- Moldura da janela ----------------------------------------------------
+   A decoração nativa está desligada (`decorations: false`). Esta barra
+   substitui minimizar, maximizar e fechar; arrastar e duplo clique continuam
+   sendo do sistema, via `data-tauri-drag-region`.
+
+   Os controles NÃO fazem parte da região de arraste: se fizessem, clicar
+   neles moveria a janela em vez de acioná-los.
+   ------------------------------------------------------------------------ */
+.dw-titlebar {
+  display: flex;
+  height: var(--titlebar-height);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--s2) 0 var(--s3);
+  border-bottom: 1px solid var(--line-hair);
+  background: var(--surface-void);
+  user-select: none;
+}
+
+.dw-titlebar__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  pointer-events: none;
+}
+
+.dw-titlebar__logo {
+  display: block;
+  width: 13px;
+  height: 13px;
+}
+
+.dw-titlebar__wordmark {
+  color: var(--ink-low);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--track-wide);
+}
+
+.dw-titlebar__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.dw-titlebar__control {
+  display: flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--m-instant) ease-out;
+}
+
+.dw-titlebar__control:hover { background: var(--surface-raised); }
+.dw-titlebar__control:focus-visible { outline: 1px solid var(--signal-active); outline-offset: -1px; }
+
+.dw-titlebar__glyph {
+  display: block;
+  opacity: 0.85;
+  transition: opacity var(--m-instant) ease-out;
+}
+
+.dw-titlebar__control:hover .dw-titlebar__glyph { opacity: 1; }
+
+/* Minimizar: triângulo apontando para baixo. */
+.dw-titlebar__control[data-control='minimize'] .dw-titlebar__glyph {
+  width: 0;
+  height: 0;
+  border-top: 6px solid var(--signal-nominal);
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+}
+
+/* Maximizar/restaurar: quadrado de cantos suavizados. */
+.dw-titlebar__control[data-control='maximize'] .dw-titlebar__glyph {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--signal-info);
+}
+
+/* Fechar: bolinha. */
+.dw-titlebar__control[data-control='close'] .dw-titlebar__glyph {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--signal-fault);
 }

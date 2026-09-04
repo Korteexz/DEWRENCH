@@ -866,3 +866,99 @@
   border-radius: 50%;
   border-style: dashed;
 }
+
+/* -- Provider GitHub: pull request, merge e compare ----------------------- */
+/*
+   Aditivo: nenhuma regra acima é alterada. As superfícies novas reaproveitam
+   os tokens e a geometria já existentes — nada de linguagem visual nova.
+*/
+
+.remote-form textarea,
+.remote-form select {
+  min-height: 28px;
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--line-edge);
+  background: var(--surface-input);
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  resize: vertical;
+}
+
+.remote-form textarea::placeholder { color: var(--ink-faint); }
+
+/* O título do PR virou o alvo de seleção; o botão não pode parecer um botão. */
+.pr-list__open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-hi);
+  font-family: inherit;
+  font-size: var(--t-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pr-list__open:hover { color: var(--signal-info); text-decoration: underline; }
+.pr-list li[data-selected='true'] { border-left: 2px solid var(--signal-info); }
+
+.pr-detail { margin-top: var(--s3); border-top: 1px solid var(--line-edge); }
+.pr-detail__title { margin: var(--s2) 0 0; color: var(--ink-hi); font-size: var(--t-body); }
+
+.pr-detail__body {
+  margin: var(--s2) 0 0;
+  padding-left: var(--s2);
+  border-left: 1px solid var(--line-edge);
+  color: var(--ink-mid);
+  font-size: var(--t-body);
+  line-height: var(--leading-body);
+  white-space: pre-wrap;
+}
+
+.pr-detail__diff { margin-top: var(--s3); }
+
+/* Ação destrutiva opt-in: precisa ser visivelmente diferente do resto. */
+.pr-detail__destructive {
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+  margin-top: var(--s2);
+  padding-left: var(--s2);
+  border-left: 2px solid var(--signal-fault);
+  color: var(--signal-fault);
+}
+
+.compare-panel { margin-top: var(--s3); }
+.compare-panel__refs { grid-template-columns: 1fr 1fr; }
+.compare-panel__external { align-self: center; text-decoration: underline; }
+
+.compare-file-list {
+  display: grid;
+  gap: var(--s2);
+  margin: var(--s2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.compare-file-list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--s2);
+  align-items: baseline;
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--line-edge);
+  background: var(--surface-raised);
+}
+
+.compare-file-list code { color: var(--ink-faint); font-size: var(--t-micro); }
+
+.compare-file-list span {
+  overflow: hidden;
+  color: var(--ink-hi);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compare-file-list small { color: var(--ink-faint); font-family: var(--font-mono); font-size: var(--t-micro); }

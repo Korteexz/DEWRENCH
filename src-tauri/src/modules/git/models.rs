@@ -259,3 +259,38 @@ pub struct GitPullOutcome {
     pub new_head: String,
     pub fetch: GitFetchOutcome,
 }
+
+// ============================================================================
+// COMPARE
+// ============================================================================
+
+/// Um arquivo tocado por uma comparação entre duas referências.
+///
+/// `additions`/`deletions` são `None` para arquivo binário: o Git reporta `-`,
+/// e traduzir isso para zero seria afirmar algo falso sobre o conteúdo.
+#[derive(Serialize)]
+pub struct GitComparisonFile {
+    pub path: String,
+    /// Letra de status do Git: `A`, `M`, `D`, `R100`…
+    pub status: String,
+    pub additions: Option<u64>,
+    pub deletions: Option<u64>,
+}
+
+/// Resultado da comparação `base...head`, calculada localmente pelo Git.
+#[derive(Serialize)]
+pub struct GitBranchComparison {
+    pub base: String,
+    pub head: String,
+    /// Ancestral comum. Ausente quando as histórias não se tocam.
+    pub merge_base: Option<String>,
+    /// Commits que `head` tem além do ancestral comum.
+    pub ahead: usize,
+    /// Commits que `base` tem e `head` não.
+    pub behind: usize,
+    pub commits: Vec<GitGraphCommit>,
+    pub files: Vec<GitComparisonFile>,
+    pub warnings: Vec<String>,
+    /// Motivo pelo qual a comparação não produz resultado útil.
+    pub blocked: Option<String>,
+}

@@ -74,9 +74,12 @@ const STDERR_LIMIT: usize = 256 * 1024;
 
 /// Variáveis removidas da herança de ambiente.
 ///
-/// Todas transformam uma execução comum de git em execução de um programa
-/// escolhido por outra pessoa, ou redirecionam o git para outro repositório.
-/// Nenhuma delas é usada por qualquer fluxo do DEWRENCH.
+/// Todas transformam uma execução comum de `git` ou `gh` em execução de um
+/// programa escolhido por outra pessoa, ou redirecionam a ferramenta para outro
+/// repositório. Nenhuma delas é usada por qualquer fluxo do DEWRENCH.
+///
+/// A lista vale para TODO `ProgramId`: uma variável perigosa não deixa de ser
+/// perigosa por causa de qual binário a leria.
 const STRIPPED_ENV: &[&str] = &[
     "GIT_EXTERNAL_DIFF",
     "GIT_DIFF_OPTS",
@@ -100,6 +103,36 @@ const STRIPPED_ENV: &[&str] = &[
     "LD_LIBRARY_PATH",
     "DYLD_INSERT_LIBRARIES",
     "DYLD_LIBRARY_PATH",
+    // -- Provider GitHub ---------------------------------------------------
+    //
+    // Duas famílias, pelo mesmo motivo das variáveis do Git acima.
+    //
+    // `GH_REPO`, `GH_HOST` e `GH_CONFIG_DIR` REDIRECIONAM: com `GH_REPO`
+    // definido, toda invocação da `gh` passa a operar sobre outro repositório —
+    // um merge confirmado na interface atingiria um destino que a interface
+    // nunca mostrou.
+    //
+    // `GH_BROWSER`, `GH_PAGER`, `GH_EDITOR` — e os equivalentes genéricos
+    // `BROWSER`, `PAGER`, `EDITOR`, `VISUAL` — apontam para PROGRAMAS: `gh
+    // browse` executaria o binário indicado por quem contaminou o ambiente.
+    //
+    // `GH_FORCE_TTY` faz a `gh` formatar a saída para terminal e quebraria os
+    // parsers de JSON; sai junto por robustez.
+    //
+    // `GH_TOKEN`, `GITHUB_TOKEN` e `GH_ENTERPRISE_TOKEN` NÃO são removidas: são
+    // mecanismo legítimo de autenticação por ambiente, não redirecionam nem
+    // executam nada, e o DEWRENCH nunca lê, guarda ou exibe seus valores.
+    "GH_REPO",
+    "GH_HOST",
+    "GH_CONFIG_DIR",
+    "GH_BROWSER",
+    "GH_PAGER",
+    "GH_EDITOR",
+    "GH_FORCE_TTY",
+    "BROWSER",
+    "PAGER",
+    "EDITOR",
+    "VISUAL",
 ];
 
 /// Config forçada em toda invocação do git.
@@ -649,7 +682,44 @@ mod tests {
         let _ = fs::remove_dir_all(root);
     }
 
+        /// Guarda de regressão da higienização do ambiente do provider GitHub.
+    ///
+    /// Estas variáveis redirecionam a `gh` para outro repositório ou apontam
+    /// para PROGRAMAS que ela executaria. Remover qualquer uma daqui reabre um
+    /// caminho fechado deliberadamente — por isso a lista é afirmada, e não
+    /// apenas documentada.
     #[test]
+    fn variaveis_perigosas_do_gh_estao_na_lista_de_remocao() {
+        for nome in [
+            "GH_REPO",
+            "GH_HOST",
+            "GH_CONFIG_DIR",
+            "GH_BROWSER",
+            "GH_PAGER",
+            "GH_EDITOR",
+            "GH_FORCE_TTY",
+            "BROWSER",
+            "PAGER",
+            "EDITOR",
+            "VISUAL",
+        ] {
+            assert!(
+                STRIPPED_ENV.contains(&nome),
+                "{nome} deixou de ser removida da herança de ambiente"
+            );
+        }
+    }
+
+    /// Token de ambiente é mecanismo legítimo de autenticação da `gh` e
+    /// continua passando: o DEWRENCH nunca lê o valor.
+    #[test]
+    fn tokens_de_ambiente_nao_sao_removidos() {
+        for nome in ["GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN"] {
+            assert!(!STRIPPED_ENV.contains(&nome));
+        }
+    }
+
+#[test]
     fn argumento_com_byte_nulo_e_recusado_antes_de_executar() {
         let root = init_repo("nulo");
         let error = run(ProcessRequest::new(

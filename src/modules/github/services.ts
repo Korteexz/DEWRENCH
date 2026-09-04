@@ -6,7 +6,14 @@
  */
 import { invoke } from '@tauri-apps/api/core'
 
-import type { GithubContext, GithubPullRequest } from './types'
+import type {
+  GithubContext,
+  GithubMergeOutcome,
+  GithubPullRequest,
+  GithubPullRequestDetail,
+  GithubPullRequestPlan,
+  MergeMethod,
+} from './types'
 
 export async function getGithubContext(path: string): Promise<GithubContext> {
   return invoke<GithubContext>('get_github_context', { path })
@@ -43,4 +50,65 @@ export async function openGithubInBrowser(
   branch?: string,
 ): Promise<string> {
   return invoke<string>('open_github_in_browser', { path, branch })
+}
+
+/** Detalhe de um pull request específico. */
+export async function getPullRequest(
+  path: string,
+  number: number,
+): Promise<GithubPullRequestDetail> {
+  return invoke<GithubPullRequestDetail>('get_pull_request', { path, number })
+}
+
+/** Diff unificado do PR, no formato que `view/diff.ts` já sabe ler. */
+export async function getPullRequestDiff(
+  path: string,
+  number: number,
+): Promise<string> {
+  return invoke<string>('get_pull_request_diff', { path, number })
+}
+
+/** Preflight read-only: não altera nada no GitHub. */
+export async function getPullRequestPlan(
+  path: string,
+  number: number,
+): Promise<GithubPullRequestPlan> {
+  return invoke<GithubPullRequestPlan>('get_pull_request_plan', { path, number })
+}
+
+/**
+ * Executa o merge.
+ *
+ * `expectedHeadSha` é o commit que o usuário revisou: o backend recusa a
+ * operação se a branch andou desde então, e repassa a mesma exigência ao
+ * GitHub. `deleteBranch` é destrutivo e só é verdadeiro quando pedido.
+ */
+export async function mergePullRequest(
+  path: string,
+  number: number,
+  method: MergeMethod,
+  deleteBranch: boolean,
+  expectedHeadSha: string | null,
+): Promise<GithubMergeOutcome> {
+  return invoke<GithubMergeOutcome>('merge_pull_request', {
+    path,
+    number,
+    method,
+    deleteBranch,
+    expectedHeadSha,
+  })
+}
+
+export async function closePullRequest(
+  path: string,
+  number: number,
+  deleteBranch: boolean,
+  expectedHeadSha: string | null,
+): Promise<GithubPullRequestDetail> {
+  return invoke<GithubPullRequestDetail>('close_pull_request', {
+    path,
+    number,
+    deleteBranch,
+    expectedHeadSha,
+  })
 }

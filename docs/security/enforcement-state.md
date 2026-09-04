@@ -27,13 +27,15 @@ falha se forem removidos.
 | Sem shell | Nenhuma invocação usa `sh -c`, `bash -c` ou `cmd /C`. Argumento é argumento. | `tests/red_team.rs` (separadores em branch, mensagem e caminho) |
 | Allowlist de executável | `ProgramId` é um enum fechado (`Git`, `Gh`). Não existe `run(program: &str)`. | tipo; não há caminho para violar |
 | `stdin` fechado | `Stdio::null()`: nenhum prompt interativo trava o app. | `core::process` |
-| Ambiente higienizado | 22 variáveis removidas da herança, incluindo `GIT_EXTERNAL_DIFF`, `GIT_DIR`, `LD_PRELOAD`, `DYLD_*`. | `tests/red_team_env.rs` |
+| Ambiente higienizado | 33 variáveis removidas da herança, incluindo `GIT_EXTERNAL_DIFF`, `GIT_DIR`, `LD_PRELOAD`, `DYLD_*`. | `tests/red_team_env.rs` |
+| Ambiente do provider GitHub | `GH_REPO`, `GH_HOST`, `GH_CONFIG_DIR` (redirecionam a `gh` para outro repositório) e `GH_BROWSER`, `GH_PAGER`, `GH_EDITOR`, `BROWSER`, `PAGER`, `EDITOR`, `VISUAL`, `GH_FORCE_TTY` (apontam para programas) removidos da herança, para todo `ProgramId`. `GH_TOKEN`/`GITHUB_TOKEN`/`GH_ENTERPRISE_TOKEN` **permanecem**: são autenticação legítima por ambiente e o DEWRENCH nunca lê seus valores. | `core::process` (lista afirmada por teste), `tests/red_team_env.rs` (PAGER) |
 | Prelúdio de config | `core.fsmonitor`, `diff.external` e `core.pager` zerados em toda invocação do git. | `tests/red_team.rs` |
 | Hooks desligados | `core.hooksPath` apontado para diretório vazio enquanto a confiança do workspace for menor que `ExecutableContent`. | `tests/red_team.rs` (post-checkout, pre-commit, `core.hooksPath`) |
 | Precedência de auth | `core.sshCommand` e `credential.helper` do repositório perdem para a config global/de sistema do usuário. | `tests/red_team.rs` |
 | Tempo limite | 60s local, 180s rede; o processo é **encerrado**, não só abandonado. | `core::process` |
 | Teto de saída | 24 MiB stdout / 256 KiB stderr, com sinal de truncamento. | `core::process` |
-| Recusa de operando | Valor que começa com `-` não chega ao git como dado. | `core::process`, `tests/red_team.rs` |
+| Recusa de operando | Valor que começa com `-` não chega ao git — nem à `gh` — como dado. | `core::process`, `tests/red_team.rs`, testes de `modules::github::service` e `modules::git::compare` |
+| Preflight revalidado nas mutações GitHub | Merge e fechamento de PR recalculam o plano imediatamente antes de mutar e abortam com `blocked` presente, com método fora da lista fechada, ou com o topo da origem diferente do revisado (`--match-head-commit`). | `modules::github::service` |
 
 ### Fronteira de autoridade — `core::state`
 
@@ -96,8 +98,15 @@ Aceito conscientemente nesta versão, com o motivo.
 2. **Config local de auth é ignorada.** Uma chave de deploy por repositório
    (`core.sshCommand` local) deixa de valer. O ganho é fechar um RCE
    reproduzido; o custo é real e conhecido.
-3. **Aprovação não está no caminho.** Push, pull e revert executam sem token de
-   aprovação vinculado ao preflight. O tipo existe; a ligação não.
+3. **Aprovação não está no caminho.** Push, pull, revert e agora merge/close de
+   pull request executam sem token de `core::approval` vinculado ao preflight.
+   O que existe é revalidação do preflight dentro da própria execução —
+   `ApprovalEvidence::RevalidatedPreflight` em espírito, sem passar por
+   `core::policy`. Mais fraca que um token: ela prova que o estado ainda é
+   válido, não que o usuário viu ESTE estado. No merge a lacuna é parcialmente
+   coberta por `expectedHeadSha` + `--match-head-commit`, que vinculam a
+   execução ao commit revisado. O tipo existe; a ligação continua não feita, por
+   decisão registrada na entrega da V0.1.
 4. **Lock não cobre o IPC inteiro.** `core::state::acquire` existe e é testado,
    mas os commands ainda não o adquirem: duas mutações simultâneas sobre o
    mesmo repositório disputam no nível do próprio git (`index.lock`), não no
@@ -134,4 +143,9 @@ Não é "seguro" nem "inseguro". É desconhecido.
 
 Docker, Kubernetes, Terraform, banco de dados, Redis, Kafka, Jenkins,
 Prometheus; cofre de segredos; broker de privilégio; sandbox; engine de
-recuperação e rollback; merge de PR; qualquer mudança de frontend.
+recuperação e rollback; qualquer mudança de frontend.
+
+> **Atualizado na entrega do GitHub V0.1:** merge de PR saiu desta lista e
+> passou a existir, com preflight revalidado (ver *ENFORCED NOW*) e sem
+> `core::policy`/`core::approval` (ver *RESIDUAL RISK* 3). As demais linhas
+> continuam fora de escopo.
