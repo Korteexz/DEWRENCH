@@ -1,6 +1,14 @@
 # Credenciais
 
-> Estado: `[PLANNED]` — o módulo atual não implementa autenticação própria nem GitHub API.
+> Estado: `[PARTIAL]` — o DEWRENCH **não implementa autenticação própria** e
+> continua sem OAuth/PAT. A integração com o GitHub existe e é feita pela CLI
+> `gh`, que resolve a autenticação inteiramente por conta própria: o DEWRENCH
+> observa apenas o exit code de `gh auth status` e nunca lê, grava, exibe ou
+> transporta token. Autenticação por variável de ambiente (`GH_TOKEN`,
+> `GITHUB_TOKEN`, `GH_ENTERPRISE_TOKEN`) continua funcionando porque essas
+> variáveis são deliberadamente mantidas na herança de ambiente — o valor é
+> consumido pela `gh`, não pelo DEWRENCH. As demais `GH_*` que redirecionam ou
+> executam programas são removidas (ver `enforcement-state.md`).
 
 ## Princípios
 
@@ -22,7 +30,7 @@ Mensagem de autenticação deve explicar qual serviço/remote falhou sem repetir
 
 ## Futuro GitHub
 
-Antes de implementar OAuth/PAT:
+O que existe hoje delega tudo à `gh`. Antes de implementar OAuth/PAT próprios:
 
 1. escrever ADR do método;
 2. modelar storage e revogação;

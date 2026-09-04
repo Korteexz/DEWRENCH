@@ -473,6 +473,17 @@ fn pull_desfaz_a_integracao_quando_ha_conflito() {
 
     // O repositório não pode ficar parado no meio de um merge.
     assert!(!clone.join(".git").join("MERGE_HEAD").exists());
+    // O fim de linha do arquivo restaurado é decidido pelo `core.autocrlf` de
+    // quem roda o teste — no Windows, o padrão converte LF em CRLF no checkout.
+    // Isso é o git obedecendo a configuração do usuário, e não faz parte do que
+    // este teste afirma: o que importa é que a versão LOCAL voltou, e não a
+    // remota. Comparar bytes crus faria o teste falhar em uma máquina onde o
+    // comportamento sob prova está correto.
     let content = std::fs::read_to_string(clone.join("arquivo.txt")).unwrap();
-    assert_eq!(content, "linha local\n");
+    assert_eq!(
+        content.replace("\r\n", "\n"),
+        "linha local\n",
+        "o conteúdo local não foi restaurado após o merge abortado (bytes \
+         lidos: {content:?})"
+    );
 }

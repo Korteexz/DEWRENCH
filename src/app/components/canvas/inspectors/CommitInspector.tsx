@@ -18,6 +18,7 @@ interface CommitInspectorProps {
   error: string | null
   onClose: () => void
   onViewDiff: () => void
+  onCloseDiff: () => void
   onCreateBranch: (name: string) => Promise<boolean>
   revertPreview: GitRevertPreview | null
   revertLoading: boolean
@@ -36,6 +37,7 @@ export default function CommitInspector({
   error,
   onClose,
   onViewDiff,
+  onCloseDiff,
   onCreateBranch,
   revertPreview,
   revertLoading,
@@ -77,8 +79,12 @@ export default function CommitInspector({
         <section className="inspector-section">
           <div className="inspector-section__heading">
             <h2>Diff</h2>
-            <Button onClick={onViewDiff} disabled={diffLoading} busy={diffLoading}>
-              {diffLoading ? 'Lendo…' : 'Ver diff'}
+            <Button
+              onClick={diff === null ? onViewDiff : onCloseDiff}
+              disabled={diffLoading}
+              busy={diffLoading}
+            >
+              {diffLoading ? 'Lendo…' : diff === null ? 'Ver diff' : 'Fechar diff'}
             </Button>
           </div>
           {diff !== null && <DiffView source={diff} />}

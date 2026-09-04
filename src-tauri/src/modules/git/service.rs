@@ -1,7 +1,10 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+use crate::core::state;
 
 use super::branches;
 use super::commits;
+use super::compare;
 use super::history;
 use super::graph;
 use super::repository;
@@ -12,6 +15,7 @@ use super::sync;
 
 use super::errors::GitOperationError;
 use super::models::{
+    GitBranchComparison,
     GitFetchOutcome,
     GitGraph,
     GitPullOutcome,
@@ -24,6 +28,32 @@ use super::models::{
     GitRevertPreview,
     ProjectOpenResult,
 };
+
+
+// ============================================================================
+// FRONTEIRA DE AUTORIDADE
+// ============================================================================
+//
+// Todo command recebe `path: &str` do frontend. Antes deste ponto, esse path
+// ERA a autoridade: qualquer chamada IPC podia apontar para qualquer diretório
+// da máquina. Aqui ele deixa de ser credencial e passa a ser apenas uma
+// referência que precisa corresponder a um workspace já registrado — o que só
+// acontece quando o usuário abre o projeto deliberadamente.
+//
+// O caminho devolvido é o do REGISTRO, não o recebido: mesmo um path que passe
+// na verificação executa contra a raiz canônica conhecida.
+
+fn authority(path: &str) -> Result<PathBuf, String> {
+    state::authorize_workspace(path)
+        .map(|record| record.scope.root().to_path_buf())
+        .map_err(|error| error.to_string())
+}
+
+fn authority_typed(path: &str) -> Result<PathBuf, GitOperationError> {
+    state::authorize_workspace(path)
+        .map(|record| record.scope.root().to_path_buf())
+        .map_err(GitOperationError::from)
+}
 
 pub fn open_project(
     path: &str,
@@ -53,7 +83,7 @@ pub fn create_repository(
 pub fn get_repository_details(
     path: &str,
 ) -> Result<GitRepositoryDetails, String> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority(path)?;
 
     if !repository_path.join(".git").exists() {
         return Err(
@@ -72,7 +102,7 @@ pub fn stage_file(
     path: &str,
     file: &str,
 ) -> Result<(), String> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority(path)?;
 
     working_tree::stage_file(
         repository_path,
@@ -87,7 +117,7 @@ pub fn stage_file(
 pub fn stage_all(
     path: &str,
 ) -> Result<(), String> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority(path)?;
 
     working_tree::stage_all(
         repository_path,
@@ -97,7 +127,7 @@ pub fn unstage_file(
     path: &str,
     file: &str,
 ) -> Result<(), String> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority(path)?;
 
     working_tree::unstage_file(
         repository_path,
@@ -108,7 +138,7 @@ pub fn create_commit(
     path: &str,
     message: &str,
 ) -> Result<String, String> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority(path)?;
 
     commits::create(
         repository_path,
@@ -119,7 +149,7 @@ pub fn create_commit(
 pub fn get_repository_graph(
     path: &str,
 ) -> Result<GitGraph, String> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority(path)?;
 
     if !repository_path.join(".git").exists() {
         return Err(
@@ -135,7 +165,7 @@ pub fn create_branch_from(
     start_point: &str,
     branch_name: &str,
 ) -> Result<(), String> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority(path)?;
 
     branches::create_from(
         repository_path,
@@ -147,7 +177,7 @@ pub fn get_commit_diff(
     path: &str,
     revision: &str,
 ) -> Result<String, String> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority(path)?;
 
     commits::get_diff(
         repository_path,
@@ -160,7 +190,7 @@ pub fn switch_branch(
     path: &str,
     branch_name: &str,
 ) -> Result<(), String> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority(path)?;
 
     branches::switch(
         repository_path,
@@ -176,7 +206,7 @@ pub fn get_revert_preview(
     path: &str,
     revision: &str,
 ) -> Result<GitRevertPreview, GitOperationError> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority_typed(path)?;
 
     history::get_revert_preview(
         repository_path,
@@ -189,7 +219,7 @@ pub fn revert_commit(
     path: &str,
     revision: &str,
 ) -> Result<GitRevertOutcome, GitOperationError> {
-    let repository_path = Path::new(path);
+    let repository_path = &authority_typed(path)?;
 
     history::revert_commit(
         repository_path,
@@ -203,19 +233,19 @@ pub fn revert_commit(
 // ============================================================================
 
 pub fn get_remotes(path: &str) -> Result<GitRemotesView, GitOperationError> {
-    remote::get_view(Path::new(path))
+    remote::get_view(&authority_typed(path)?)
 }
 
 pub fn add_remote(path: &str, name: &str, url: &str) -> Result<(), GitOperationError> {
-    remote::add(Path::new(path), name, url)
+    remote::add(&authority_typed(path)?, name, url)
 }
 
 pub fn remove_remote(path: &str, name: &str) -> Result<(), GitOperationError> {
-    remote::remove(Path::new(path), name)
+    remote::remove(&authority_typed(path)?, name)
 }
 
 pub fn rename_remote(path: &str, from: &str, to: &str) -> Result<(), GitOperationError> {
-    remote::rename(Path::new(path), from, to)
+    remote::rename(&authority_typed(path)?, from, to)
 }
 
 pub fn set_remote_url(
@@ -224,7 +254,7 @@ pub fn set_remote_url(
     url: &str,
     push_only: bool,
 ) -> Result<(), GitOperationError> {
-    remote::set_url(Path::new(path), name, url, push_only)
+    remote::set_url(&authority_typed(path)?, name, url, push_only)
 }
 
 // ============================================================================
@@ -238,7 +268,7 @@ pub fn get_push_plan(
     target_branch: Option<String>,
 ) -> Result<GitPushPlan, GitOperationError> {
     sync::plan_push(
-        Path::new(path),
+        &authority_typed(path)?,
         remote_name.as_deref(),
         source_branch.as_deref(),
         target_branch.as_deref(),
@@ -253,7 +283,7 @@ pub fn push_branch(
     set_upstream: bool,
 ) -> Result<GitPushOutcome, GitOperationError> {
     sync::push(
-        Path::new(path),
+        &authority_typed(path)?,
         remote_name.as_deref(),
         source_branch.as_deref(),
         target_branch.as_deref(),
@@ -266,7 +296,7 @@ pub fn fetch_remote(
     remote_name: Option<String>,
     prune: bool,
 ) -> Result<GitFetchOutcome, GitOperationError> {
-    sync::fetch(Path::new(path), remote_name.as_deref(), prune)
+    sync::fetch(&authority_typed(path)?, remote_name.as_deref(), prune)
 }
 
 pub fn get_pull_plan(
@@ -275,7 +305,7 @@ pub fn get_pull_plan(
     remote_branch: Option<String>,
 ) -> Result<GitPullPlan, GitOperationError> {
     sync::plan_pull(
-        Path::new(path),
+        &authority_typed(path)?,
         remote_name.as_deref(),
         remote_branch.as_deref(),
     )
@@ -288,9 +318,29 @@ pub fn pull_branch(
     strategy: &str,
 ) -> Result<GitPullOutcome, GitOperationError> {
     sync::pull(
-        Path::new(path),
+        &authority_typed(path)?,
         remote_name.as_deref(),
         remote_branch.as_deref(),
         strategy,
     )
+}
+
+// ============================================================================
+// COMPARE
+// ============================================================================
+
+pub fn get_branch_comparison(
+    path: &str,
+    base: &str,
+    head: &str,
+) -> Result<GitBranchComparison, GitOperationError> {
+    compare::compare(&authority_typed(path)?, base, head)
+}
+
+pub fn get_comparison_diff(
+    path: &str,
+    base: &str,
+    head: &str,
+) -> Result<String, GitOperationError> {
+    compare::diff(&authority_typed(path)?, base, head)
 }

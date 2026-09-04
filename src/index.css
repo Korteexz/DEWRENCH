@@ -60,6 +60,11 @@
   --sans: var(--font-sans);
   --mono: var(--font-mono);
 
+  /* Moldura própria: a decoração nativa está desligada em tauri.conf.json.
+     As telas que mediam 100vh passam a medir o que sobra abaixo da barra. */
+  --titlebar-height: 30px;
+  --app-height: calc(100vh - var(--titlebar-height));
+
   color: var(--ink-mid);
   background: var(--surface-void);
   font-family: var(--font-sans);

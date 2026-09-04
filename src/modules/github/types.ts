@@ -33,3 +33,67 @@ export interface GithubPullRequest {
   url: string
   review_decision: string | null
 }
+
+/** Métodos de merge que o backend aceita. Lista fechada, espelhando o Rust. */
+export type MergeMethod = 'merge' | 'squash' | 'rebase'
+
+/**
+ * Detalhe de um pull request.
+ *
+ * `mergeable` e `merge_state_status` são a resposta do GitHub, repassada sem
+ * interpretação: quem decide se o merge pode acontecer é o preflight do
+ * backend, nunca esta interface.
+ */
+export interface GithubPullRequestDetail {
+  number: number
+  title: string
+  body: string
+  state: string
+  is_draft: boolean
+  head_branch: string
+  base_branch: string
+  head_sha: string | null
+  author: string | null
+  url: string
+  review_decision: string | null
+  mergeable: string | null
+  merge_state_status: string | null
+  changed_files: number
+  additions: number
+  deletions: number
+  commit_count: number
+}
+
+/**
+ * Preflight de merge/close.
+ *
+ * Mesmo contrato de `GitPushPlan`/`GitPullPlan`: enquanto `blocked` não for
+ * nulo, a confirmação fica indisponível — e o backend recusa de novo, mesmo
+ * que a interface deixasse passar.
+ */
+export interface GithubPullRequestPlan {
+  number: number
+  title: string
+  state: string
+  is_draft: boolean
+  head_branch: string
+  base_branch: string
+  head_sha: string | null
+  url: string
+  mergeable: string | null
+  merge_state_status: string | null
+  review_decision: string | null
+  available_methods: MergeMethod[]
+  recommended_method: MergeMethod | null
+  warnings: string[]
+  blocked: string | null
+}
+
+export interface GithubMergeOutcome {
+  number: number
+  method: string
+  merged: boolean
+  deleted_branch: boolean
+  url: string
+  notes: string[]
+}

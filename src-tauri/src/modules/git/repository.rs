@@ -1,5 +1,8 @@
 use std::path::Path;
 
+use crate::core::path_security::display_path;
+use crate::core::state;
+
 use super::git_cli;
 use super::models::{
     GitState,
@@ -38,15 +41,23 @@ pub fn open(
         })?
         .to_string();
 
+    // Abrir o projeto é o ÚNICO ato que concede autoridade sobre um diretório.
+    // Todas as operações seguintes verificam contra este registro; sem ele,
+    // elas são negadas mesmo recebendo o caminho correto.
+    let record = state::register_workspace(&canonical_path)
+        .map_err(|error| error.to_string())?;
+
     let git_state = detect_git_state(
-        &canonical_path,
+        record.scope.root(),
     );
 
     Ok(ProjectOpenResult {
         name,
-        path: canonical_path
-            .to_string_lossy()
-            .into_owned(),
+        // `display_path` remove o prefixo verbatim do Windows (`\\?\`), que é
+        // detalhe da API de canonicalização e não um caminho que o usuário
+        // reconhece. A autoridade não depende desta forma: ela é reresolvida
+        // e comparada de forma canônica a cada chamada.
+        path: display_path(record.scope.root()),
         git_state,
     })
 }

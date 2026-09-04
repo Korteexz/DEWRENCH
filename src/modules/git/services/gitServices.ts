@@ -3,6 +3,7 @@ import type { ProjectOpenResult } from '../types/project'
 import type { GitGraph, GitRepositoryDetails } from '../types/repository'
 import type { GitRevertOutcome, GitRevertPreview } from '../types/revert'
 import type { GitRemotesView } from '../types/remote'
+import type { GitBranchComparison } from '../types/compare'
 import type {
   GitFetchOutcome,
   GitPullOutcome,
@@ -223,4 +224,26 @@ export async function pullBranch(
     remoteBranch,
     strategy,
   })
+}
+
+// ============================================================================
+// COMPARE
+// ============================================================================
+
+/** Comparação read-only entre duas referências locais. Não fala com a rede. */
+export async function getBranchComparison(
+  path: string,
+  base: string,
+  head: string,
+): Promise<GitBranchComparison> {
+  return invoke<GitBranchComparison>('get_branch_comparison', { path, base, head })
+}
+
+/** Diff da mesma comparação, buscado só quando alguém pede para ver. */
+export async function getComparisonDiff(
+  path: string,
+  base: string,
+  head: string,
+): Promise<string> {
+  return invoke<string>('get_comparison_diff', { path, base, head })
 }

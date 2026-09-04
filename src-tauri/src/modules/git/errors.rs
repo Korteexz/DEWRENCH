@@ -46,6 +46,12 @@ pub mod codes {
     pub const PROVIDER_UNAVAILABLE: &str = "PROVIDER_UNAVAILABLE";
     pub const PROVIDER_NOT_AUTHENTICATED: &str = "PROVIDER_NOT_AUTHENTICATED";
     pub const PROVIDER_COMMAND_FAILED: &str = "PROVIDER_COMMAND_FAILED";
+
+    // -- Recusas do Security Core -----------------------------------------
+    //
+    // Os códigos do Core cruzam o IPC com o texto que o próprio Core define
+    // (`CoreError::code()`), sem tradução: um código de negação que muda de
+    // nome no caminho vira um contrato que ninguém consegue verificar.
 }
 
 /// Limite de tamanho para texto técnico devolvido ao frontend.
@@ -107,29 +113,16 @@ impl GitOperationError {
     }
 }
 
-/// Remove credenciais embutidas em URLs e limita o tamanho do texto técnico.
+/// Remove material sensível e limita o tamanho do texto técnico.
 ///
-/// O Revert não acessa a rede, mas a saída do Git pode citar remotes
-/// configurados; o saneamento evita que credenciais cheguem à interface.
+/// A redação em si pertence ao `core::events`, que é a autoridade única sobre
+/// o que conta como segredo; aqui fica apenas o limite de tamanho, que é regra
+/// do contrato de IPC e não de segurança. Antes esta função cobria somente
+/// credencial embutida em URL — delegar amplia a cobertura (tokens com prefixo
+/// conhecido, blocos PEM, pares chave=valor sensíveis) sem alterar assinatura
+/// nem formato de saída.
 pub fn sanitize(raw: String) -> String {
-    let mut result = String::with_capacity(raw.len());
-
-    for piece in raw.split("://") {
-        if result.is_empty() {
-            result.push_str(piece);
-            continue;
-        }
-
-        result.push_str("://");
-
-        match (piece.find('@'), piece.find('/')) {
-            (Some(at), Some(slash)) if at < slash => result.push_str(&piece[at..]),
-            (Some(at), None) => result.push_str(&piece[at..]),
-            _ => result.push_str(piece),
-        }
-    }
-
-    let trimmed = result.trim().to_string();
+    let trimmed = crate::core::events::redact(&raw).trim().to_string();
 
     if trimmed.chars().count() <= MAX_DETAILS_LENGTH {
         return trimmed;
@@ -140,9 +133,47 @@ pub fn sanitize(raw: String) -> String {
     truncated
 }
 
+/// Recusa do Security Core apresentada no contrato de erro existente.
+///
+/// A conversão preserva o código do Core em vez de achatar tudo em
+/// `GIT_COMMAND_FAILED`: o frontend precisa conseguir distinguir "o projeto não
+/// está aberto" de "o Git recusou o comando", e o red team precisa conseguir
+/// afirmar QUAL fronteira bloqueou uma tentativa.
+///
+/// `recoverable = true` em todas: uma negação de autoridade não deixa o
+/// repositório em estado indefinido — ela impede que a operação comece.
+impl From<crate::core::error::CoreError> for GitOperationError {
+    fn from(error: crate::core::error::CoreError) -> Self {
+        let mut mapped = GitOperationError::new(error.code(), error.to_string());
+
+        if let Some(action) = error.suggested_action() {
+            mapped = mapped.with_action(action);
+        }
+
+        mapped
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn erro_do_core_preserva_o_codigo_de_negacao() {
+        let denied: GitOperationError = crate::core::error::CoreError::WorkspaceNotRegistered {
+            attempted: "/tmp/qualquer".to_string(),
+        }
+        .into();
+
+        assert_eq!(denied.code, "WORKSPACE_NOT_REGISTERED");
+        assert!(denied.suggested_action.is_some());
+    }
+
+    #[test]
+    fn sanitize_remove_token_com_prefixo_conhecido() {
+        let sanitized = sanitize("remote: erro com ghp_aaaabbbbccccddddeeeeffff1234".to_string());
+        assert!(!sanitized.contains("ghp_aaaabbbbccccddddeeeeffff1234"));
+    }
 
     #[test]
     fn sanitize_remove_credencial_de_url() {

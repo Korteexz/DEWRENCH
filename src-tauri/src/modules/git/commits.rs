@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use crate::core::process::operand;
+
 use super::git_cli;
 use super::models::{GitCommit, GitGraphCommit};
 
@@ -65,6 +67,11 @@ pub fn get_diff(
     path: &Path,
     revision: &str,
 ) -> Result<String, String> {
+    // Explícito de propósito: `verify_commit` já recusaria, mas depender disso
+    // faz a segurança deste comando morar em outra função — e quem reordenar
+    // as chamadas amanhã não teria como saber.
+    let revision = operand(revision).map_err(|error| error.to_string())?;
+
     verify_commit(path, revision)?;
 
     git_cli::run(
@@ -85,6 +92,12 @@ fn verify_commit(
     path: &Path,
     revision: &str,
 ) -> Result<(), String> {
+    // `rev-parse` e `show` não separam opções de revisão com `--` (em `show`,
+    // `--` já significa "daqui em diante são caminhos"). Para revisão, a
+    // recusa de valores iniciados por `-` é a barreira, e ela precisa
+    // acontecer antes da primeira execução.
+    let revision = operand(revision).map_err(|error| error.to_string())?;
+
     let revision_expression =
         format!("{revision}^{{commit}}");
 
@@ -109,6 +122,7 @@ pub fn list_range(
     range: &str,
     limit: usize,
 ) -> Result<Vec<GitGraphCommit>, String> {
+    let range = operand(range).map_err(|error| error.to_string())?;
     let limit_arg = format!("-{limit}");
 
     let output = git_cli::run(
